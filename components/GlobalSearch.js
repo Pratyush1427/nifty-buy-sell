@@ -22,8 +22,11 @@ export default function GlobalSearch() {
         searchFundsClient(term, ctrl.signal).catch(() => []),
       ]);
       setGroups({
-        stocks: (Array.isArray(stocks) ? stocks : []).filter((s) => /\.(NS|BO)$/.test(s.symbol)).slice(0, 5),
-        funds: funds.slice(0, 5),
+        stocks: (Array.isArray(stocks) ? stocks : [])
+          .filter((s) => /\.(NS|BO)$/.test(s.symbol) && ['EQUITY', 'ETF'].includes(s.type))
+          .slice(0, 5)
+          .map((s) => ({ ...s, kind: 'stock' })),
+        funds: funds.slice(0, 5).map((f) => ({ ...f, kind: 'fund' })),
       });
       setActive(0);
       setOpen(true);
@@ -43,7 +46,7 @@ export default function GlobalSearch() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const flat = [...groups.stocks.map((s) => ({ ...s, kind: 'stock' })), ...groups.funds.map((f) => ({ ...f, kind: 'fund' }))];
+  const flat = [...groups.stocks, ...groups.funds];
   const go = (item) => {
     setOpen(false);
     setQ('');

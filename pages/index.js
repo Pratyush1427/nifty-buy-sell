@@ -19,11 +19,11 @@ export default function PortfolioPage() {
   const fundRows = summary.positions.filter((p) => p.assetClass === 'funds');
   const attention = useAttention(summary, strategy, fundErrors);
 
-  const anyOpen = (market?.benchmarks || []).some((b) => b.marketState === 'REGULAR');
+  const nseOpen = market?.benchmarks?.find((b) => b.symbol === '^NSEI')?.marketState === 'REGULAR';
   const subtitle = (
     <span className="freshness">
-      <FreshnessDot state={error ? 'warn' : anyOpen ? 'live' : 'closed'} />
-      {error ? `Couldn't refresh prices (${error})` : market ? `Stock prices ${anyOpen ? 'live' : 'as of close'}, updated ${timeAgo(market.fetchedAt)}` : 'Loading prices…'}
+      <FreshnessDot state={error ? 'warn' : nseOpen ? 'live' : 'closed'} />
+      {error ? `Couldn't refresh prices (${error})` : market ? `Stock prices ${nseOpen ? 'live' : 'as of last close'}, updated ${timeAgo(market.fetchedAt)}` : 'Loading prices…'}
       {navDate && ` · fund NAVs as of ${new Date(navDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
       <button type="button" className="link accent small" onClick={reload} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
     </span>

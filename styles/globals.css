@@ -526,3 +526,9 @@ a.link.accent, .link.accent { color: var(--accent); }
 .search-hint { margin: 8px 0 10px; }
 .combo-list li { grid-template-columns: 1fr auto; }
 .gs-group li[role="option"] { grid-template-columns: 1fr auto; }
+
+/* Header search results: wider than the box, full names, identifiers underneath. */
+.gs-list { left: auto; right: 0; width: min(480px, calc(100vw - 32px)); }
+.gs-group li[role="option"] { grid-template-columns: 1fr; gap: 1px; }
+.gs-group .combo-name { white-space: normal; }
+.gs-group .combo-ex { font-size: 11.5px; }

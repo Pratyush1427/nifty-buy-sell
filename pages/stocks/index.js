@@ -59,7 +59,10 @@ export default function StocksPage() {
     }
   }, [tab]);
 
+  // Refresh fast while anything trades (COMEX runs nearly round the clock), but
+  // only call the market "open" during the NSE session.
   const anyOpen = (market?.benchmarks || []).some((b) => b.marketState === 'REGULAR');
+  const nseOpen = market?.benchmarks?.find((b) => b.symbol === '^NSEI')?.marketState === 'REGULAR';
   usePolling(load, anyOpen ? OPEN_MS : CLOSED_MS, prefsReady);
 
   const tabs = market?.universes || FALLBACK_TABS;
@@ -110,8 +113,8 @@ export default function StocksPage() {
         title="Stocks"
         subtitle={(
           <span className="freshness">
-            <FreshnessDot state={error || feedPaused ? 'warn' : anyOpen ? 'live' : 'closed'} />
-            {error || feedPaused ? 'Feed interrupted, showing saved prices' : anyOpen ? 'Market open' : 'Market closed'}
+            <FreshnessDot state={error || feedPaused ? 'warn' : nseOpen ? 'live' : 'closed'} />
+            {error || feedPaused ? 'Feed interrupted, showing saved prices' : nseOpen ? 'NSE open' : 'NSE closed'}
             {market && ` · updated ${timeAgo(market.fetchedAt)}`}
             <button type="button" className="link accent small" onClick={load} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
           </span>
