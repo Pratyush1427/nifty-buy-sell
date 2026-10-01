@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3100",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3100",
     "ml": ".venv/bin/python -W ignore -m ml.run",
     "ml:predict": ".venv/bin/python -W ignore -m ml.run --predict",
     "ml:schedule": "scripts/schedule-ml.sh install",
@@ -15,6 +15,8 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
     "next": "14.2.15",
     "pg": "^8.23.1",
     "react": "18.2.0",

@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useApp } from '../lib/client';
 import AddInvestment from './AddInvestment';
 import GlobalSearch from './GlobalSearch';
+import UserMenu from './UserMenu';
 
 const NAV = [
   { href: '/', label: 'Portfolio', match: (p) => p === '/' },
@@ -36,6 +37,7 @@ export default function AppShell({ children }) {
             ))}
           </nav>
           <GlobalSearch />
+          <UserMenu />
         </div>
       </header>
 
