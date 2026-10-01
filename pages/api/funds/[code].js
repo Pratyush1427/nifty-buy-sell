@@ -1,6 +1,7 @@
+import { withUser } from '../../../lib/api';
 import { getFundDetail } from '../../../lib/funds';
 
-export default async function handler(req, res) {
+async function handler(req, res, userId) {
   const code = String(req.query.code || '').replace(/^MF:/i, '');
   if (!/^\d{3,7}$/.test(code)) return res.status(400).json({ error: 'A numeric AMFI scheme code is required' });
   try {
@@ -9,3 +10,5 @@ export default async function handler(req, res) {
     return res.status(/No fund/.test(error.message) ? 404 : 502).json({ error: error.message });
   }
 }
+
+export default withUser(handler);

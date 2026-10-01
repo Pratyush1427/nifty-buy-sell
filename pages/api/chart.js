@@ -1,7 +1,8 @@
+import { withUser } from '../../lib/api';
 import { getChart } from '../../lib/market';
 import { normalizeSymbol } from '../../lib/symbols';
 
-export default async function handler(req, res) {
+async function handler(req, res, userId) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,3 +19,5 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: `Chart data unavailable: ${error.message}` });
   }
 }
+
+export default withUser(handler);

@@ -9,13 +9,20 @@
     "ml": ".venv/bin/python -W ignore -m ml.run",
     "ml:predict": ".venv/bin/python -W ignore -m ml.run --predict",
     "ml:schedule": "scripts/schedule-ml.sh install",
-    "ml:unschedule": "scripts/schedule-ml.sh uninstall"
+    "ml:unschedule": "scripts/schedule-ml.sh uninstall",
+    "db:start": "supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "next": "14.2.15",
+    "pg": "^8.23.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "yahoo-finance2": "^4.0.2"
+  },
+  "devDependencies": {
+    "better-sqlite3": "^13.0.3",
+    "supabase": "^2.119.0"
   }
 }

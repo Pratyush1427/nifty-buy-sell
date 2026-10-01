@@ -1,6 +1,7 @@
+import { withUser } from '../../lib/api';
 import { searchSymbols } from '../../lib/market';
 
-export default async function handler(req, res) {
+async function handler(req, res, userId) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -14,3 +15,5 @@ export default async function handler(req, res) {
     return res.status(200).json([]);
   }
 }
+
+export default withUser(handler);

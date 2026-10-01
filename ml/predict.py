@@ -1,12 +1,12 @@
 """Score the latest trading day with every model and write the results to SQLite."""
 import json
-import sqlite3
 
 import joblib
 import numpy as np
 import pandas as pd
 
-from .config import BENCHMARK, DB_PATH, MODEL_PATH, REPORT_PATH, SNAPSHOT_PATH
+from .config import BENCHMARK, MODEL_PATH, REPORT_PATH, SNAPSHOT_PATH
+from .db import connect
 from .features import FEATURE_LABELS, RANKED, build_panel, market_features, stock_features
 from .models import ENSEMBLE
 
@@ -96,29 +96,26 @@ def predict(prices, universe, extras, log=print):
 
 
 def write_scores(records, version, report=None, replace=True):
-    """replace=True rewrites everything (nightly); False upserts a few on-demand scores."""
-    with sqlite3.connect(DB_PATH) as con:
-        con.executescript("""
-            DROP TABLE IF EXISTS ml_predictions;
-            CREATE TABLE IF NOT EXISTS ml_scores (
-              symbol TEXT NOT NULL, model TEXT NOT NULL, as_of TEXT NOT NULL, prob REAL NOT NULL,
-              pct_rank REAL NOT NULL, drivers TEXT, in_universe INTEGER NOT NULL DEFAULT 1,
-              PRIMARY KEY (symbol, model)
-            );
-            CREATE TABLE IF NOT EXISTS ml_model (
-              id INTEGER PRIMARY KEY CHECK (id = 1), version TEXT NOT NULL, report TEXT NOT NULL, predicted_at TEXT NOT NULL
-            );
-        """)
+    """replace=True rewrites everything (nightly); False upserts a few scores."""
+    rows = [
+        (s, m, pd.Timestamp(d).date().isoformat(), float(p), float(r), json.dumps(dr), bool(u))
+        for s, m, d, p, r, dr, u in records
+    ]
+    with connect() as con, con.cursor() as cur:  # one transaction: readers never see a half-written set
         if replace:
-            con.execute("DELETE FROM ml_scores")
-        con.executemany(
-            "INSERT OR REPLACE INTO ml_scores (symbol, model, as_of, prob, pct_rank, drivers, in_universe) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [(s, m, pd.Timestamp(d).date().isoformat(), float(p), r, json.dumps(dr), u) for s, m, d, p, r, dr, u in records],
+            cur.execute("DELETE FROM ml_scores")
+        cur.executemany(
+            "INSERT INTO ml_scores (symbol, model, as_of, prob, pct_rank, drivers, in_universe) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (symbol, model) DO UPDATE SET as_of = excluded.as_of, prob = excluded.prob, "
+            "pct_rank = excluded.pct_rank, drivers = excluded.drivers, in_universe = excluded.in_universe",
+            rows,
         )
-        if report is None:
-            return
-        con.execute(
-            "INSERT INTO ml_model (id, version, report, predicted_at) VALUES (1, ?, ?, datetime('now')) "
-            "ON CONFLICT(id) DO UPDATE SET version = excluded.version, report = excluded.report, predicted_at = excluded.predicted_at",
-            (version, json.dumps(report)),
-        )
+        if report is not None:
+            cur.execute(
+                "INSERT INTO ml_model (id, version, report, predicted_at) "
+                "VALUES (1, %s, %s, to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')) "
+                "ON CONFLICT (id) DO UPDATE SET version = excluded.version, report = excluded.report, "
+                "predicted_at = excluded.predicted_at",
+                (version, json.dumps(report)),
+            )

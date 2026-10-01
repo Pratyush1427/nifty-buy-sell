@@ -1,11 +1,11 @@
 """Download and cache daily OHLCV for the training universe."""
-import sqlite3
 import warnings
 
 import pandas as pd
 import yfinance as yf
 
-from .config import BENCHMARK, CACHE_DIR, DATA_DIR, DB_PATH, HISTORY_START, UNIVERSE_FILES
+from .config import BENCHMARK, CACHE_DIR, DATA_DIR, HISTORY_START, UNIVERSE_FILES
+from .db import connect
 
 warnings.filterwarnings("ignore", message=".*OpenSSL.*")
 
@@ -20,17 +20,12 @@ def universe():
 
 
 def held_equities():
-    """NSE/BSE stocks the user holds or watches (scored nightly, not trained on)."""
-    if not DB_PATH.exists():
-        return []
-    symbols = set()
-    with sqlite3.connect(DB_PATH) as con:
-        for table in ("holdings", "watchlist"):
-            try:
-                symbols.update(r[0] for r in con.execute(f"SELECT DISTINCT symbol FROM {table}"))
-            except sqlite3.OperationalError:
-                pass  # table not created yet
-    return sorted(s for s in symbols if s.endswith((".NS", ".BO")))
+    """NSE/BSE stocks in anyone's open picks or watchlist (scored nightly, not trained on)."""
+    with connect() as con:
+        rows = con.execute(
+            "SELECT symbol FROM picks WHERE removed_at IS NULL UNION SELECT symbol FROM watchlist"
+        ).fetchall()
+    return sorted(r[0] for r in rows if r[0].endswith((".NS", ".BO")))
 
 
 def download(symbols, start=HISTORY_START):

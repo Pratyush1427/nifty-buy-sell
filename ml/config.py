@@ -1,10 +1,26 @@
 """Shared settings for the ML pipeline."""
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 CACHE_DIR = DATA_DIR / "ml"
-DB_PATH = DATA_DIR / "portfolio.db"
+
+
+def _database_url():
+    """DATABASE_URL from the environment, else from .env.local (local development)."""
+    if os.environ.get("DATABASE_URL"):
+        return os.environ["DATABASE_URL"]
+    env = ROOT / ".env.local"
+    if env.exists():
+        for line in env.read_text().splitlines():
+            if line.startswith("DATABASE_URL="):
+                return line.split("=", 1)[1].strip()
+    return None
+
+
+# The app's Postgres: the pipeline reads picked/watched stocks and writes scores.
+DATABASE_URL = _database_url()
 MODEL_PATH = CACHE_DIR / "models.joblib"
 REPORT_PATH = CACHE_DIR / "report.json"
 LOG_PATH = CACHE_DIR / "nightly.log"

@@ -3,3 +3,4 @@ numpy
 yfinance
 scikit-learn>=1.3
 joblib
+psycopg[binary]>=3.2
