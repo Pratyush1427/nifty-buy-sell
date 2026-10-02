@@ -108,7 +108,7 @@ npm install
 npm run db:start               # local Supabase (Postgres + Auth + test inbox) in Docker
 npm run env:local              # writes .env.local with the local connection details
 
-python3 -m venv .venv && .venv/bin/pip install -r ml/requirements.txt
+python3 -m venv .venv && .venv/bin/pip install -r ml/requirements.in
 npm run ml                     # first run trains the models and writes scores (~6 minutes)
 
 npm run dev                    # http://localhost:3100

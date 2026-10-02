@@ -9,7 +9,7 @@ Quick start
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r backtest/requirements.txt
+pip install -r backtest/requirements.in
 ```
 
 2. Run the backtest:
