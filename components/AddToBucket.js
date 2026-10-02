@@ -1,14 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { closingDay, istClock } from '../lib/closingDay';
+import { closingDayFor, istClock, nyClock } from '../lib/closingDay';
 import { postJson, searchFundsClient, useApp } from '../lib/client';
 import { displaySymbol } from '../lib/format';
+import { GOLD, isGold, isUs } from '../lib/kinds';
 import SymbolSearch from './SymbolSearch';
 import { Message, Segmented } from './ui';
 
 const TABS = [
-  { key: 'stock', label: 'Stock or ETF' },
+  { key: 'stock', label: 'Indian stock / ETF' },
+  { key: 'us', label: 'US stock' },
   { key: 'fund', label: 'Mutual fund' },
+  { key: 'gold', label: 'Gold' },
 ];
+const searchIn = (market) => (q, signal) => fetch(`/api/search?market=${market}&q=${encodeURIComponent(q)}`, { signal }).then((r) => r.json());
+const searchIndian = searchIn('in');
+const searchUs = searchIn('us');
+const kindOf = (symbol) => (!symbol ? 'stock' : symbol.startsWith('MF:') ? 'fund' : isUs(symbol) ? 'us' : isGold(symbol) ? 'gold' : 'stock');
+const UNIT_LABEL = { stock: 'Shares', us: 'Shares', fund: 'Units', gold: 'Grams' };
+const PRICE_LABEL = { stock: 'Buy price (₹)', us: 'Buy price ($)', fund: 'Buy NAV (₹)', gold: 'Price per gram (₹)' };
 // One-tap picks for the metals, which most people don't know the tickers for.
 const METALS = [
   { symbol: 'GOLDBEES.NS', name: 'Nippon India Gold BeES' },
@@ -18,9 +27,13 @@ const NEW = '__new__';
 
 const lockDay = (iso) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '');
 
-/** "Locks in at today's close" / "…at the close on Mon 5 Oct", from the same rule the server uses. */
-export function lockInText(now = new Date()) {
-  const day = closingDay(now);
+/**
+ * "Locks in at today's close" / "…at the close on Mon 5 Oct", from the same rule
+ * the server uses. US stocks and gold use the New York close.
+ */
+export function lockInText(now = new Date(), market = 'IN') {
+  const day = closingDayFor(market, now);
+  if (market === 'US') return day === nyClock(now).date ? 'today’s New York closing price (4 pm Eastern)' : 'the next New York closing price';
   if (day === istClock(now).date) return 'today’s closing price (after 3:30 pm IST)';
   const d = new Date(`${day}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   return `the closing price on ${d}`;
@@ -47,7 +60,7 @@ export default function AddToBucket() {
   useEffect(() => {
     if (!pickDialog) return;
     const p = pickDialog;
-    setKind(p.kind || (p.symbol?.startsWith('MF:') ? 'fund' : 'stock'));
+    setKind(p.kind || kindOf(p.symbol));
     setText('');
     setPicked(p.symbol ? { symbol: p.symbol, name: p.name } : null);
     setBucketId(p.bucketId || buckets[0]?.id || NEW);
@@ -70,11 +83,14 @@ export default function AddToBucket() {
 
   if (!pickDialog) return null;
   const preset = Boolean(pickDialog.symbol);
-  const symbol = (preset ? pickDialog.symbol : picked?.symbol) || (kind === 'stock' ? text.trim() : '');
+  const typed = text.trim().toUpperCase();
+  const symbol = (preset ? pickDialog.symbol : picked?.symbol)
+    || (kind === 'gold' ? GOLD.symbol : kind === 'us' && typed ? `US:${typed.replace(/^US:/, '')}` : kind === 'stock' ? text.trim() : '');
+  const market = kind === 'us' || kind === 'gold' ? 'US' : 'IN';
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!symbol) return setMsg({ kind: 'error', text: kind === 'fund' ? 'Pick a fund from the list.' : 'Enter a stock or ETF.' });
+    if (!symbol) return setMsg({ kind: 'error', text: kind === 'fund' ? 'Pick a fund from the list.' : 'Enter a stock.' });
     setBusy(true);
     setMsg(null);
     try {
@@ -121,6 +137,25 @@ export default function AddToBucket() {
           {!preset && (
             <>
               <Segmented options={TABS} value={kind} onChange={(k) => { setKind(k); setText(''); setPicked(null); setMsg(null); }} label="Instrument type" />
+              {kind === 'gold' && (
+                <p className="gold-note small">
+                  <b>24K gold, by the gram.</b> Valued daily at an estimated Indian price per gram (international price
+                  in ₹ plus import duty). Enter the grams you hold and the price per gram you paid.{' '}
+                  <a className="link accent" href="/gold" target="_blank" rel="noreferrer">Today’s price per gram</a>
+                </p>
+              )}
+              {kind === 'us' && (
+                <label>
+                  <span>US stock</span>
+                  <SymbolSearch
+                    value={text}
+                    onChange={(v) => { setText(v); setPicked(null); }}
+                    onPick={setPicked}
+                    search={searchUs}
+                    inputProps={{ name: 'symbol', placeholder: 'Name or ticker, e.g. "amazon" or "AMZN"' }}
+                  />
+                </label>
+              )}
               {kind === 'stock' ? (
                 <>
                   <label>
@@ -129,6 +164,7 @@ export default function AddToBucket() {
                       value={text}
                       onChange={(v) => { setText(v); setPicked(null); }}
                       onPick={setPicked}
+                      search={searchIndian}
                       inputProps={{ name: 'symbol', placeholder: 'Name or ticker, e.g. "tata motors"' }}
                     />
                   </label>
@@ -140,7 +176,7 @@ export default function AddToBucket() {
                     ))}
                   </div>
                 </>
-              ) : (
+              ) : kind === 'fund' && (
                 <label>
                   <span>Mutual fund</span>
                   <SymbolSearch
@@ -159,11 +195,11 @@ export default function AddToBucket() {
 
           <div className="form-row three">
             <label>
-              <span>Quantity</span>
+              <span>{UNIT_LABEL[kind]}</span>
               <input className="input" name="quantity" type="number" min="0" step="any" required value={quantity} onChange={(e) => setQuantity(e.target.value)} />
             </label>
             <label>
-              <span>Buy price (₹)</span>
+              <span>{PRICE_LABEL[kind]}</span>
               <input className="input" name="price" type="number" min="0" step="any" placeholder="closing price" value={price} onChange={(e) => setPrice(e.target.value)} />
             </label>
             <label>
@@ -194,7 +230,8 @@ export default function AddToBucket() {
           <p className="muted tiny" style={{ margin: 0 }}>
             {price.trim()
               ? 'Uses the buy price you entered. Prices you type are your own record: they aren’t checked, and nothing here connects to a broker.'
-              : <>No price entered, so it uses <strong>{date === istClock().date ? lockInText() : `the closing price on ${lockDay(date)}`}</strong> (or the next trading day’s, if the market was shut).</>}
+              : <>No price entered, so it uses <strong>{date === istClock().date ? lockInText(new Date(), market) : `the closing price on ${lockDay(date)}`}</strong> (or the next trading day’s, if the market was shut).</>}
+            {kind === 'us' && ' US prices are in dollars; values are converted to ₹ at the USD/INR rate of each date.'}
           </p>
           <Message msg={msg} />
           <div className="modal-actions">

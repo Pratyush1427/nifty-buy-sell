@@ -33,8 +33,9 @@ and see how your ideas would have done at real closing prices.**
 ## How the game works
 
 1. **Make a bucket for an idea.** “Banks I like”, “Gold as a hedge”, “IT turnaround”. Up to 5 buckets.
-2. **Add picks.** Any NSE/BSE stock or ETF (one-tap gold and silver), or any mutual fund by name, with a
-   **quantity**, a **buy date** and, optionally, **your buy price**. Up to 25 per bucket.
+2. **Add picks.** Any NSE/BSE stock or ETF, **US stock** (Nasdaq/NYSE, priced in dollars), mutual fund, or
+   **gold by the gram**, with a **quantity**, a **buy date** and, optionally, **your buy price**. Up to 25 per bucket.
+   US values convert to ₹ at the USD/INR rate of each date, so their ₹ P&L includes the rupee’s move.
 3. **No price typed? It takes a closing price:** the close of the buy date (for today: today’s close after 3:30 pm
    IST, or the next trading day’s). Typed prices are the user’s own record and aren’t checked.
 4. **Track the P&L.** Each pick and bucket shows invested amount, value at the latest close, P&L in ₹ and %, the
@@ -46,6 +47,13 @@ Valuation is end-of-day on purpose: SEBI and the exchanges have warned against v
 real-time prices. There is no leaderboard and nothing to win; buckets are private, and nothing connects to a broker.
 
 ![Add to bucket dialog with stock search, gold and silver shortcuts, and the lock-in rule](docs/images/add-to-bucket.png)
+
+## Gold, per gram
+
+The **Gold** section shows an estimated Indian price for 24K and 22K gold, per gram and per 10 g, with a one-year
+chart. There’s no free official feed for Indian or digital gold rates, so it’s worked out from public data:
+COMEX gold × USD/INR ÷ 31.1035 g/oz, plus 6% import duty (before 3% GST). The duty rate lives in
+[`lib/gold.js`](lib/gold.js). Gold in buckets is valued at this price per gram.
 
 ## Model outlooks
 

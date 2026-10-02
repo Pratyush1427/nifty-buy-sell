@@ -5,11 +5,13 @@ import { Message, ModelSelect, PageHeader, SignalPill, SkeletonRows, Tile } from
 import { istClock } from '../lib/closingDay';
 import { ASSET_CLASSES, api, assetClassOf, hrefFor, isFund, postJson, useApp, usePolling } from '../lib/client';
 import { displaySymbol, money, percent, qty, signedMoney, tone } from '../lib/format';
+import { GOLD, isGold, isUs } from '../lib/kinds';
 import { getStrategy } from '../lib/strategies';
 
 const MAX_BUCKETS = 5;
 const day = (iso) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—');
 const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+const qtyLabel = (p) => (isGold(p.symbol) ? `${qty(p.quantity)} g` : qty(p.quantity));
 
 /** My buckets: pretend collections of picks with the user's quantity and buy price, valued at closing prices. */
 export default function BucketsPage() {
@@ -108,8 +110,9 @@ export default function BucketsPage() {
         <Bucket key={b.id} bucket={b} info={info} strategy={strategy} onAdd={() => openPick({ bucketId: b.id })} onEdit={setEditing} />
       ))}
       <p className="muted tiny table-foot">
-        Values use end-of-day closing prices. Buy prices you type are your own record and aren’t checked; nothing here
-        connects to a broker. Removed picks keep counting at their exit price, so a bucket’s P&amp;L includes them.
+        Values use end-of-day closing prices, in ₹. US stocks convert at the USD/INR rate of each date, so their ₹ P&amp;L
+        includes the rupee’s move. Gold uses an estimated Indian price per gram. Buy prices you type are your own record
+        and aren’t checked; nothing here connects to a broker. Removed picks keep counting at their exit price, so a bucket’s P&amp;L includes them.
         Model outlooks are experimental and are not recommendations.
       </p>
       {editing && <EditPick pick={editing} name={info[editing.symbol]?.name} onClose={() => setEditing(null)} />}
@@ -140,7 +143,7 @@ function NewBucketForm({ onCreate, onCancel, initial = '' }) {
  */
 function useInstrumentInfo(buckets, strategyKey) {
   const all = useMemo(() => [...new Set(buckets.flatMap((b) => b.picks.map((p) => p.symbol)))].sort(), [buckets]);
-  const stocks = all.filter((s) => !isFund(s)).join(',');
+  const stocks = all.filter((s) => !isFund(s) && !isGold(s)).join(',');
   const funds = all.filter(isFund).join(',');
   const [market, setMarket] = useState(null);
   const [fundInfo, setFundInfo] = useState({});
@@ -161,6 +164,7 @@ function useInstrumentInfo(buckets, strategyKey) {
     const map = {};
     for (const s of market?.stocks || []) map[s.symbol] = { name: s.name, ...(s.signals?.[strategyKey] || {}) };
     for (const [sym, f] of Object.entries(fundInfo || {})) if (f?.name) map[sym] = { name: f.name };
+    map[GOLD.symbol] = { name: GOLD.name };
     return map;
   }, [market, fundInfo, strategyKey]);
 }
@@ -259,8 +263,7 @@ function Bucket({ bucket, info, strategy, onAdd, onEdit }) {
           <table className="table">
             <thead>
               <tr>
-                <th>Pick</th>
-                <th>Outlook ({strategy.label})</th>
+                <th>Pick · outlook ({strategy.label})</th>
                 <th className="num">Qty</th>
                 <th className="num">Avg buy</th>
                 <th className="num">Invested</th>
@@ -290,10 +293,10 @@ function Bucket({ bucket, info, strategy, onAdd, onEdit }) {
                 {closed.map((p) => (
                   <tr key={p.id}>
                     <td><Link className="link" href={hrefFor(p.symbol)}>{info[p.symbol]?.name || displaySymbol(p.symbol)}</Link></td>
-                    <td className="num">{qty(p.quantity)}</td>
-                    <td className="num">{money(p.entry_price)}</td>
+                    <td className="num">{qtyLabel(p)}</td>
+                    <td className="num">{money(p.entry_price, { currency: p.currency })}</td>
                     <td>{p.exit_price ? day(p.exit_date) : <span className="muted">at {day(p.exit_date)} close</span>}</td>
-                    <td className="num">{money(p.exit_price)}</td>
+                    <td className="num">{money(p.exit_price, { currency: p.currency })}</td>
                     <td className={`num ${tone(p.pnl)}`}>
                       {signedMoney(p.pnl, { whole: true })} <span className="tiny">{percent(p.returnPct)}</span>
                       {!p.exit_price && p.pnl != null && <span className="muted tiny"> so far</span>}
@@ -317,7 +320,7 @@ function PickRow({ pick, info, onEdit }) {
   const removePick = async () => {
     const msg = pending
       ? `Remove ${label}? It hasn’t got a buy price yet, so it will simply be dropped.`
-      : `Remove ${label}? It exits at ${lockInText()}, and its P&L stays in this bucket’s record.`;
+      : `Remove ${label}? It exits at ${lockInText(new Date(), isUs(pick.symbol) || isGold(pick.symbol) ? 'US' : 'IN')}, and its P&L stays in this bucket’s record.`;
     if (!window.confirm(msg)) return;
     try {
       await api(`/api/picks?id=${pick.id}`, { method: 'DELETE' });
@@ -329,15 +332,15 @@ function PickRow({ pick, info, onEdit }) {
 
   return (
     <tr>
-      <td>
+      <td className="pick-cell">
         <Link className="link" href={hrefFor(pick.symbol)}><b>{label}</b></Link>
+        {!isFund(pick.symbol) && !isGold(pick.symbol) && <> <SignalPill signal={info?.signal || 'LOADING'} title={info?.reason} /></>}
         <div className="muted tiny">
-          {isFund(pick.symbol) ? `Mutual fund · AMFI ${pick.symbol.slice(3)}` : displaySymbol(pick.symbol)}
+          {isFund(pick.symbol) ? `Mutual fund · AMFI ${pick.symbol.slice(3)}` : isGold(pick.symbol) ? '24K, estimated Indian price' : isUs(pick.symbol) ? `${displaySymbol(pick.symbol)} · US · USD` : displaySymbol(pick.symbol)}
           {' · '}bought {day(pick.entry_date)}
         </div>
       </td>
-      <td>{isFund(pick.symbol) ? <span className="muted tiny">No outlook for funds</span> : <SignalPill signal={info?.signal || 'LOADING'} title={info?.reason} />}</td>
-      <td className="num">{qty(pick.quantity)}</td>
+      <td className="num">{qtyLabel(pick)}</td>
       {pending ? (
         <td colSpan={4}>
           <span className="chip warn" title={`The closing price on ${day(pick.entry_date)}, or the next trading day’s if the market is shut that day`}>
@@ -347,12 +350,18 @@ function PickRow({ pick, info, onEdit }) {
       ) : (
         <>
           <td className="num">
-            {money(pick.entry_price)}
-            <div className="muted tiny">{pick.price_source === 'manual' ? 'your price' : 'closing price'}</div>
+            {money(pick.entry_price, { currency: pick.currency })}
+            <div className="muted tiny">{pick.price_source === 'manual' ? 'your price' : 'closing price'}{isGold(pick.symbol) ? ' /g' : ''}</div>
           </td>
-          <td className="num">{money(pick.invested, { whole: true })}</td>
-          <td className="num">{money(pick.lastClose)}<div className="muted tiny">{day(pick.lastCloseDate)}</div></td>
-          <td className="num">{money(pick.value, { whole: true })}</td>
+          <td className="num">
+            {money(pick.invested, { whole: true })}
+            {pick.fxEntry && <div className="muted tiny">{money(pick.quantity * pick.entry_price, { currency: 'USD', whole: true })} @ ₹{pick.fxEntry.toFixed(2)}</div>}
+          </td>
+          <td className="num">{money(pick.lastClose, { currency: pick.currency })}<div className="muted tiny">{isGold(pick.symbol) ? 'per gram · ' : ''}{day(pick.lastCloseDate)}</div></td>
+          <td className="num">
+            {money(pick.value, { whole: true })}
+            {pick.fxLatest && <div className="muted tiny">{money(pick.quantity * pick.lastClose, { currency: 'USD', whole: true })} @ ₹{pick.fxLatest.toFixed(2)}</div>}
+          </td>
         </>
       )}
       <td className={`num ${tone(pick.pnl)}`}>
@@ -364,8 +373,10 @@ function PickRow({ pick, info, onEdit }) {
         {pick.dayChangePct != null && <div className="tiny">{percent(pick.dayChangePct)}</div>}
       </td>
       <td className="actions">
-        <button type="button" className="btn ghost small" onClick={onEdit} aria-label={`Edit ${label}`}>Edit</button>{' '}
-        <button type="button" className="btn ghost small" onClick={removePick} aria-label={`Remove ${label}`}>Remove</button>
+        <div className="row-actions">
+          <button type="button" className="link accent small" onClick={onEdit} aria-label={`Edit ${label}`}>Edit</button>
+          <button type="button" className="link small muted" onClick={removePick} aria-label={`Remove ${label}`}>Remove</button>
+        </div>
       </td>
     </tr>
   );
@@ -409,10 +420,10 @@ function EditPick({ pick, name, onClose }) {
         </div>
         <form className="form" onSubmit={save}>
           <div className="form-row three">
-            <label><span>Quantity</span>
+            <label><span>{isGold(pick.symbol) ? 'Grams' : isFund(pick.symbol) ? 'Units' : 'Shares'}</span>
               <input className="input" type="number" min="0" step="any" required autoFocus value={quantity} onChange={(e) => setQuantity(e.target.value)} />
             </label>
-            <label><span>Buy price (₹)</span>
+            <label><span>{isUs(pick.symbol) ? 'Buy price ($)' : isGold(pick.symbol) ? 'Price per gram (₹)' : 'Buy price (₹)'}</span>
               <input className="input" type="number" min="0" step="any" placeholder="closing price" value={price} onChange={(e) => setPrice(e.target.value)} />
             </label>
             <label><span>Buy date</span>

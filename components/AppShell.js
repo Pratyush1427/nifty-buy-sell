@@ -11,6 +11,7 @@ const NAV = [
   { href: '/', label: 'My buckets', match: (p) => p === '/' },
   { href: '/stocks', label: 'Stocks', match: (p) => p.startsWith('/stocks') },
   { href: '/funds', label: 'Mutual funds', match: (p) => p.startsWith('/funds') },
+  { href: '/gold', label: 'Gold', match: (p) => p.startsWith('/gold') },
   { href: '/models', label: 'Models', match: (p) => p.startsWith('/models') },
 ];
 
@@ -52,7 +53,7 @@ export default function AppShell({ children }) {
       <main id="main" className="shell">{children}</main>
 
       <footer className="foot muted tiny">
-        Stock prices from Yahoo Finance (may be delayed or wrong); mutual fund NAVs from AMFI via mfapi.in (daily).
+        Stock, gold and USD/INR prices from Yahoo Finance (may be delayed or wrong); mutual fund NAVs from AMFI via mfapi.in (daily). Gold per gram is an estimate.
         Model outlooks are automated experiments, not recommendations. Nothing here is investment advice; don’t rely on it for real decisions.{' '}
         <Link href="/disclaimer">Disclaimer</Link> · <Link href="/terms">Terms</Link>
       </footer>

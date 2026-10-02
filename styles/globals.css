@@ -15,6 +15,7 @@
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
+  --series-4: #8b5cf6;
   --ref: #8a8984;
   --grid: #eceef2;
 
@@ -604,3 +605,15 @@ a.link.accent, .link.accent { color: var(--accent); }
 .alloc.compact { flex: 1; min-width: 220px; display: grid; gap: 6px; }
 .alloc-legend.inline { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; margin: 0; padding: 0; list-style: none; }
 .alloc-legend.inline li { display: inline-flex; gap: 5px; align-items: center; }
+.alloc-seg.series-4, .swatch.sq.series-4 { background: var(--series-4); }
+.gold-note { margin: 0; background: #fdf6e3; color: #6b4f0f; border: 1px solid #f1e2b8; border-radius: 10px; padding: 10px 12px; line-height: 1.5; }
+
+/* gold */
+.gold-chart { width: 100%; height: auto; display: block; }
+.gold-chart .grid-line { stroke: var(--grid); stroke-dasharray: 3 4; }
+.gold-chart .axis { font-size: 12px; fill: var(--text-3); }
+.table.calc td { white-space: normal; }
+.row-actions { display: grid; gap: 4px; justify-items: end; }
+.bucket .table td, .bucket .table th { padding-left: 8px; padding-right: 8px; }
+.bucket .table td.pick-cell { white-space: normal; min-width: 200px; max-width: 280px; line-height: 1.35; }
+.bucket .table td.pick-cell .pill { vertical-align: 1px; margin-left: 4px; }

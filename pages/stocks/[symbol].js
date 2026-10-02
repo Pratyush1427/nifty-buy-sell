@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import { useCallback, useState } from 'react';
 import PriceChart from '../../components/PriceChart';
 import { ModelSelect, PageHeader, SignalPill, SkeletonRows } from '../../components/ui';
-import { api, isStock, useApp, usePolling } from '../../lib/client';
+import { api, isIndianStock, isStock, useApp, usePolling } from '../../lib/client';
 import { displaySymbol, percent, priceOf, tone } from '../../lib/format';
 import { STRATEGIES, STRATEGY_GROUPS, getStrategy } from '../../lib/strategies';
 
@@ -48,7 +48,7 @@ export default function StockPage() {
   const signals = stock.signals || {};
   const overall = signals.overall;
   const current = signals[strategy.key];
-  const mlMissing = isStock(stock.symbol) && signals.ensemble?.signal === 'NO_DATA';
+  const mlMissing = isIndianStock(stock.symbol) && signals.ensemble?.signal === 'NO_DATA';
   const watched = watchlist.includes(stock.symbol);
   const v = (k, f) => signals[k]?.values?.[f];
 
