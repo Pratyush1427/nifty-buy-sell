@@ -18,7 +18,7 @@ and see how your ideas would have done at real closing prices.**
 > Nothing here is investment advice, a recommendation or a research report, and the builder is **not registered
 > with SEBI**. Model outlooks are automated experiments; prices can be wrong or late. Don’t use it for real decisions.
 
-![My buckets: three buckets with picks, entry and latest closes, returns and model outlooks](docs/images/buckets.png)
+![My buckets: totals, two buckets with Amazon shares in USD, gold by the gram, Indian stocks and a fund, each with P&L and allocation](docs/images/overview.png)
 
 ## Contents
 
@@ -46,7 +46,11 @@ and see how your ideas would have done at real closing prices.**
 Valuation is end-of-day on purpose: SEBI and the exchanges have warned against virtual-trading games built on
 real-time prices. There is no leaderboard and nothing to win; buckets are private, and nothing connects to a broker.
 
-![Add to bucket dialog with stock search, gold and silver shortcuts, and the lock-in rule](docs/images/add-to-bucket.png)
+![Add to bucket dialog: tabs for Indian stocks, US stocks, mutual funds and gold, with quantity, buy price and date](docs/images/add-to-bucket.png)
+
+| US stocks | Gold, per gram |
+|---|---|
+| ![US stocks tab: about 50 large US companies in US dollars against the S&P 500](docs/images/us-stocks.png) | ![Gold page: estimated Indian price per gram for 24K and 22K, a one-year chart and the calculation](docs/images/gold.png) |
 
 ## Gold, per gram
 
