@@ -1,0 +1,9 @@
+# Exact versions for the scheduled job (GitHub Actions). Saved models are only
+# reused while these and the ml/ code are unchanged; otherwise the job retrains.
+# Loose ranges for local setups are in requirements.txt.
+joblib==1.5.3
+numpy==2.0.2
+pandas==2.3.3
+psycopg[binary]==3.2.13
+scikit-learn==1.6.1
+yfinance==1.2.0

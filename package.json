@@ -8,8 +8,6 @@
     "start": "next start -p 3100",
     "ml": ".venv/bin/python -W ignore -m ml.run",
     "ml:predict": ".venv/bin/python -W ignore -m ml.run --predict",
-    "ml:schedule": "scripts/schedule-ml.sh install",
-    "ml:unschedule": "scripts/schedule-ml.sh uninstall",
     "db:start": "supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset"

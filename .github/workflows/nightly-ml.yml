@@ -1,0 +1,79 @@
+# Scores every stock after the market closes and writes the results to the
+# app's database. Retrains the models once they're a week old (or whenever the
+# ML code or its pinned packages change).
+name: Nightly ML
+
+on:
+  schedule:
+    - cron: '30 13 * * 1-5' # 19:00 IST, Monday to Friday
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'nightly = score, retrain if due · retrain = full retrain · predict = score only'
+        type: choice
+        options: [nightly, retrain, predict]
+        default: nightly
+
+concurrency:
+  group: nightly-ml
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ml:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # Models are tied to the ML code and pinned packages: change either and
+      # the cache key changes, so the job retrains instead of loading stale models.
+      - name: Model cache key
+        id: models
+        run: echo "key=ml-models-${{ hashFiles('ml/requirements.lock', 'ml/*.py') }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: ml/requirements.lock
+
+      - name: Install
+        run: pip install -r ml/requirements.lock
+
+      # Trained models persist between runs in the Actions cache. A miss just
+      # means this run retrains from scratch.
+      - name: Restore trained models
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/ml/models.joblib
+            data/ml/report.json
+            data/ml/latest.pkl
+          key: ${{ steps.models.outputs.key }}-${{ github.run_id }}
+          restore-keys: ${{ steps.models.outputs.key }}-
+
+      - name: Score (and retrain if due)
+        env:
+          # Supabase *session pooler* connection string (IPv4; Actions runners
+          # can't reach the IPv6-only direct connection).
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MODE: ${{ inputs.mode || 'nightly' }}
+        run: |
+          case "$MODE" in
+            retrain) python -W ignore -m ml.run ;;
+            predict) python -W ignore -m ml.run --predict ;;
+            *)       python -W ignore -m ml.run --nightly ;;
+          esac
+
+      - name: Save trained models
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/ml/models.joblib
+            data/ml/report.json
+            data/ml/latest.pkl
+          key: ${{ steps.models.outputs.key }}-${{ github.run_id }}
