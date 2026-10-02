@@ -49,7 +49,7 @@ export default function Welcome() {
 
   return (
     <AuthLayout title="Welcome" wide>
-      <h1>Welcome to Nifty Signals</h1>
+      <h1>Welcome to Stockpot</h1>
       <p className="muted small" style={{ margin: 0 }}>
         Two quick things before you start: how you’ll appear, and what this app is (and isn’t).
       </p>

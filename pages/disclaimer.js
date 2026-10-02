@@ -4,7 +4,7 @@ export default function Disclaimer() {
   return (
     <LegalPage title="Disclaimer">
       <LastUpdated date="2026-10-02" />
-      <p><strong>Nifty Signals is a personal learning project and a game. It is not investment advice.</strong></p>
+      <p><strong>Stockpot is a personal learning project and a game. It is not investment advice.</strong></p>
 
       <h2>Not advice, not a recommendation</h2>
       <p>

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useApp } from '../lib/client';
 import AddToBucket from './AddToBucket';
+import BrandMark from './BrandMark';
 import GlobalSearch from './GlobalSearch';
 import UserMenu from './UserMenu';
 
@@ -20,14 +21,15 @@ export default function AppShell({ children }) {
   return (
     <>
       <Head>
-        <title>Nifty Signals</title>
+        <title>Stockpot</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </Head>
       <a className="skip-link" href="#main">Skip to content</a>
       <header className="app-header">
         <div className="app-header-inner">
-          <Link href="/" className="brand" aria-label="Nifty Signals home">
-            <span className="brand-mark" aria-hidden="true">▲</span> Nifty Signals
+          <Link href="/" className="brand" aria-label="Stockpot home">
+            <BrandMark /> Stockpot
           </Link>
           <nav className="app-nav" aria-label="Main">
             {NAV.map((n) => (

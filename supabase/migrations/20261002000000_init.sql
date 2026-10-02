@@ -1,4 +1,4 @@
--- Nifty Signals: multi-user schema.
+-- Stockpot: multi-user schema.
 --
 -- Per-user data (buckets, picks, watchlist, profiles) is keyed to Supabase Auth
 -- users and removed with them. Market data and ML output are shared.

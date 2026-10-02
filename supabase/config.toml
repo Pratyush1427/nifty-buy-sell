@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "nifty-signals"
+project_id = "stockpot"
 
 [api]
 enabled = true
@@ -418,13 +418,13 @@ enabled = true
 # so they work in any browser. Copy these into the hosted project's
 # Authentication → Emails settings (or `supabase config push`).
 [auth.email.template.confirmation]
-subject = "Confirm your email for Nifty Signals"
+subject = "Confirm your email for Stockpot"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.magic_link]
-subject = "Your Nifty Signals sign-in link"
+subject = "Your Stockpot sign-in link"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.recovery]
-subject = "Reset your Nifty Signals password"
+subject = "Reset your Stockpot password"
 content_path = "./supabase/templates/recovery.html"

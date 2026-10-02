@@ -6,7 +6,7 @@ export default function Terms() {
     <LegalPage title="Terms of use">
       <LastUpdated date="2026-10-02" />
       <p>
-        By creating an account or using Nifty Signals, you agree to these terms and to the{' '}
+        By creating an account or using Stockpot, you agree to these terms and to the{' '}
         <Link href="/disclaimer">Disclaimer</Link>. If you don’t agree, please don’t use the site.
       </p>
 
