@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
 import GoogleButton from '../components/GoogleButton';
-import { safeNext } from '../lib/supabase/config';
+import { authRedirect, safeNext } from '../lib/supabase/config';
 import { supabaseBrowser } from '../lib/supabase/browser';
 
 const LINK_ERRORS = {
@@ -29,7 +29,7 @@ export default function Login() {
     setUnconfirmed(false);
     const supabase = supabaseBrowser();
     if (mode === 'magic') {
-      const { error: err } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+      const { error: err } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: authRedirect(next) } });
       setBusy(false);
       if (err) return setError(err.message);
       return router.push(`/check-email?kind=magic&email=${encodeURIComponent(email)}`);
@@ -46,7 +46,7 @@ export default function Login() {
 
   const resend = async () => {
     setBusy(true);
-    await supabaseBrowser().auth.resend({ type: 'signup', email });
+    await supabaseBrowser().auth.resend({ type: 'signup', email, options: { emailRedirectTo: authRedirect('/welcome') } });
     setBusy(false);
     router.push(`/check-email?kind=confirm&email=${encodeURIComponent(email)}`);
   };

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
 import GoogleButton from '../components/GoogleButton';
 import { PASSWORD_RULE, passwordOk } from '../lib/passwords';
+import { authRedirect } from '../lib/supabase/config';
 import { supabaseBrowser } from '../lib/supabase/browser';
 
 export default function Signup() {
@@ -21,7 +22,7 @@ export default function Signup() {
     const { data, error: err } = await supabaseBrowser().auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/welcome` },
+      options: { emailRedirectTo: authRedirect('/welcome') },
     });
     if (err) {
       setBusy(false);

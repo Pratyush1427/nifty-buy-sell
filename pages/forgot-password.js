@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
+import { authRedirect } from '../lib/supabase/config';
 import { supabaseBrowser } from '../lib/supabase/browser';
 
 export default function ForgotPassword() {
@@ -13,7 +14,7 @@ export default function ForgotPassword() {
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
-    const { error: err } = await supabaseBrowser().auth.resetPasswordForEmail(email);
+    const { error: err } = await supabaseBrowser().auth.resetPasswordForEmail(email, { redirectTo: authRedirect('/reset-password') });
     setBusy(false);
     if (err) return setError(err.message);
     // Same message whether or not the account exists, so emails can't be probed.
