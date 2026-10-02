@@ -1,17 +1,17 @@
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import FundChart from '../../components/FundChart';
 import { PageHeader, SkeletonRows } from '../../components/ui';
 import { api, useApp } from '../../lib/client';
-import { money, percent, qty, signedMoney, tone } from '../../lib/format';
+import { money, percent, tone } from '../../lib/format';
 
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
-/** Fund detail: "Is this fund any good, and how is my money in it doing?" */
+/** Fund detail: returns, category comparison and NAV history. */
 export default function FundPage() {
   const router = useRouter();
   const code = typeof router.query.code === 'string' ? router.query.code : null;
-  const { lots, watchlist, toggleWatch, openAdd } = useApp();
+  const { watchlist, toggleWatch, openPick, pickedIn } = useApp();
   const [fund, setFund] = useState(null);
   const [error, setError] = useState(null);
 
@@ -23,15 +23,6 @@ export default function FundPage() {
   }, [code]);
 
   const symbol = code ? `MF:${code}` : null;
-  const position = useMemo(() => {
-    if (!fund) return null;
-    const mine = lots.filter((l) => l.symbol === symbol);
-    if (!mine.length) return null;
-    const units = mine.reduce((s, l) => s + Number(l.shares), 0);
-    const cost = mine.reduce((s, l) => s + Number(l.shares) * Number(l.avg_price), 0);
-    const value = units * fund.price;
-    return { units, avg: cost / units, cost, value, pnl: value - cost, pnlPct: ((value - cost) / cost) * 100 };
-  }, [fund, lots, symbol]);
 
   if (error) {
     return (
@@ -80,7 +71,7 @@ export default function FundPage() {
             <button type="button" className={`btn ghost ${watched ? 'on' : ''}`} onClick={() => toggleWatch(symbol, fund.name)} aria-pressed={watched}>
               {watched ? '★ Watching' : '☆ Watch'}
             </button>
-            <button type="button" className="btn primary" onClick={() => openAdd({ kind: 'fund', symbol, name: fund.name, price: fund.price })}>+ Add to portfolio</button>
+            <button type="button" className="btn primary" onClick={() => openPick({ symbol, name: fund.name })}>+ Add to bucket</button>
           </>
         )}
       />
@@ -92,12 +83,8 @@ export default function FundPage() {
         </div>
       )}
 
-      {position && (
-        <section className="position-strip">
-          <div><span className="label">You own</span><b>{qty(Number(position.units.toFixed(3)))}</b> <span className="muted small">units @ {money(position.avg)} avg</span></div>
-          <div><span className="label">Value</span><b>{money(position.value, { whole: true })}</b></div>
-          <div><span className="label">P/L</span><b className={tone(position.pnl)}>{signedMoney(position.pnl, { whole: true })}</b> <span className={`small ${tone(position.pnl)}`}>{percent(position.pnlPct)}</span></div>
-        </section>
+      {pickedIn.has(symbol) && (
+        <p className="in-buckets small">In your bucket{pickedIn.get(symbol).length > 1 ? 's' : ''}: <b>{pickedIn.get(symbol).join(', ')}</b></p>
       )}
 
       {headline && (

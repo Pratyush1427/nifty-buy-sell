@@ -3,9 +3,10 @@ const signed = (v, d = 2) => (v === null || v === undefined ? '—' : `${v >= 0 
 const KIND = { overall: 'Overall', rule: 'Rule', ml: 'ML' };
 
 /**
- * Every decision model scored on the same out-of-sample test: when it said
- * BUY, how often did the stock beat the Nifty over the next 20 sessions, and
- * how much better did its BUYs do than its SELLs?
+ * Every model scored on the same historical, out-of-sample test: when its
+ * outlook was bullish, how often did the stock beat the Nifty over the next 20
+ * sessions, and how did its bullish stocks compare with its bearish ones?
+ * Shown as a learning exercise about past data, never as a claim about the future.
  */
 export default function Leaderboard({ report, active, onPick }) {
   if (!report?.leaderboard) return null;
@@ -16,9 +17,10 @@ export default function Leaderboard({ report, active, onPick }) {
   return (
     <div className="leaderboard">
       <div className="lb-head">
-        <span className="label">Track record · out of sample {report.testPeriod}</span>
+        <span className="label">Historical test · {report.testPeriod}, years each model never saw</span>
         <span className="muted tiny">
-          All stocks beat the Nifty {pct(base)} of the time. A useful model&rsquo;s BUYs beat that and its SELLs trail it. |t| ≥ 2 is the usual bar for &ldquo;probably not luck&rdquo;.
+          In this period, all stocks beat the Nifty {pct(base)} of the time. A model with an edge would show its bullish stocks above that and its bearish ones below it.
+          |t| ≥ 2 is the usual bar for &ldquo;probably not luck&rdquo;. Past results say nothing about the future.
         </span>
       </div>
       <div className="table-scroll">
@@ -26,11 +28,11 @@ export default function Leaderboard({ report, active, onPick }) {
           <thead>
             <tr>
               <th>Model</th>
-              <th className="num">BUYs beat Nifty</th>
-              <th className="num">SELLs beat Nifty</th>
-              <th>BUY minus SELL, per 20 sessions</th>
+              <th className="num">Bullish beat Nifty</th>
+              <th className="num">Bearish beat Nifty</th>
+              <th>Bullish minus bearish, per 20 sessions</th>
               <th className="num">t</th>
-              <th className="num">BUY calls</th>
+              <th className="num">Bullish cases</th>
             </tr>
           </thead>
           <tbody>
@@ -79,12 +81,13 @@ export function TrackRecord({ report, strategyKey }) {
   const significant = r.edge_tstat !== null && Math.abs(r.edge_tstat) >= 2;
   return (
     <p className="track-record">
-      <b>Track record ({report.testPeriod}):</b>{' '}
-      BUY calls beat the Nifty {pct(r.buy_hit_rate)} of the time vs {pct(r.base_hit_rate)} for all stocks; SELL calls {pct(r.sell_hit_rate)}.
+      <b>Historical test ({report.testPeriod}):</b>{' '}
+      stocks it rated bullish beat the Nifty {pct(r.buy_hit_rate)} of the time vs {pct(r.base_hit_rate)} for all stocks; bearish ones {pct(r.sell_hit_rate)}.
       {r.edge_pct === null
-        ? ' Too few BUY and SELL calls on the same days to compare them'
-        : ` BUYs ${good ? 'out' : 'under'}performed SELLs by ${Math.abs(r.edge_pct).toFixed(2)}% per 20 sessions`}
-      {significant ? ' (statistically significant).' : ` (t = ${r.edge_tstat ?? '—'}, not statistically significant).`}
+        ? ' Too few bullish and bearish cases on the same days to compare them'
+        : ` Its bullish stocks ${good ? 'did better' : 'did worse'} than its bearish ones by ${Math.abs(r.edge_pct).toFixed(2)}% per 20 sessions`}
+      {significant ? ' (more than chance would explain).' : ` (t = ${r.edge_tstat ?? '—'}, within what chance would explain).`}
+      {' '}Past results say nothing about the future.
     </p>
   );
 }

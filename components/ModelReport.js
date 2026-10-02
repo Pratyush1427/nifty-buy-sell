@@ -69,10 +69,10 @@ export default function ModelReport({ report, modelKey }) {
     <div className="model-report">
       <div className={`verdict-line ${significant ? 'ok' : 'warn'}`}>
         {significant
-          ? `${m.label} showed a statistically significant edge out of sample (t = ${m.spread_tstat}). It is still a probability, not a forecast.`
+          ? `In this historical test, ${m.label}'s top-ranked stocks did better than its bottom-ranked ones by more than chance would explain (t = ${m.spread_tstat}). That describes the past only and says nothing about the future.`
           : beatsBase
-            ? `${m.label}'s top picks beat the Nifty more often than average out of sample, but the edge is small and not statistically significant (t = ${m.spread_tstat}). Treat it as one input among several.`
-            : `${m.label} did not beat the baseline out of sample. Treat its signals as noise.`}
+            ? `In this historical test, ${m.label}'s top-ranked stocks beat the Nifty slightly more often than average, but not by more than chance would explain (t = ${m.spread_tstat}).`
+            : `In this historical test, ${m.label} did no better than chance.`}
       </div>
 
       <div className="model-stats">

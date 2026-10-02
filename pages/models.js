@@ -5,7 +5,7 @@ import { PageHeader, SkeletonRows } from '../components/ui';
 import { api, useApp } from '../lib/client';
 import { STRATEGIES, STRATEGY_GROUPS, getStrategy } from '../lib/strategies';
 
-/** Models: "How are signals decided, and can I trust them?" */
+/** Models: how each outlook is decided, and how each model behaved in historical tests. */
 export default function ModelsPage() {
   const { prefs, setPref } = useApp();
   const [report, setReport] = useState(undefined);
@@ -21,8 +21,13 @@ export default function ModelsPage() {
     <>
       <PageHeader
         title="Models"
-        subtitle="How each signal is decided, and how each model has done on years it never saw. Your choice here drives every signal in the app."
+        subtitle="How each model’s outlook is decided, and how it behaved in historical tests on years it never saw. Your choice here sets the outlook shown across the app."
       />
+
+      <div className="banner warn">
+        These models were built while learning about markets and machine learning. The tests below describe past data only:
+        they are not evidence that any model works, and no outlook here is a recommendation to buy or sell anything.
+      </div>
 
       <section className="strategy-bar">
         <div className="strategy-groups" role="tablist" aria-label="Decision models">
@@ -51,15 +56,15 @@ export default function ModelsPage() {
         <div className="model-detail-head">
           <p className="strategy-summary"><b>{strategy.label}:</b> {strategy.summary}</p>
           {isDefault
-            ? <span className="chip good">Used for all signals</span>
-            : <button type="button" className="btn primary small" onClick={() => setPref('strategy', strategy.key)}>Use {strategy.label} for all signals</button>}
+            ? <span className="chip good">Used for all outlooks</span>
+            : <button type="button" className="btn primary small" onClick={() => setPref('strategy', strategy.key)}>Use {strategy.label} for all outlooks</button>}
         </div>
         {report && <TrackRecord report={report} strategyKey={strategy.key} />}
         {strategy.group === 'ml' && report !== undefined && <ModelReport report={report} modelKey={strategy.key} />}
       </section>
 
       <section className="panel">
-        <h2>How the models compare</h2>
+        <h2>Historical test results</h2>
         {report === undefined ? <SkeletonRows rows={5} /> : report ? (
           <Leaderboard report={report} active={strategy.key} onPick={setViewing} />
         ) : (
@@ -72,7 +77,7 @@ export default function ModelsPage() {
           <h2>Keeping the models current</h2>
           <p className="small">
             Scores were last refreshed for <b>{report.asOf}</b>; models trained {new Date(report.trainedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} on {report.symbols} stocks.
-            A scheduled job re-scores every weekday at 18:30 and retrains weekly (<code>npm run ml:schedule</code> installs it). Run <code>npm run ml</code> any time for a full retrain.
+            A scheduled job re-scores every weekday evening and retrains weekly.
           </p>
         </section>
       )}

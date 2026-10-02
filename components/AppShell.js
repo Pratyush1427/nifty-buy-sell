@@ -2,12 +2,12 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useApp } from '../lib/client';
-import AddInvestment from './AddInvestment';
+import AddToBucket from './AddToBucket';
 import GlobalSearch from './GlobalSearch';
 import UserMenu from './UserMenu';
 
 const NAV = [
-  { href: '/', label: 'Portfolio', match: (p) => p === '/' },
+  { href: '/', label: 'My buckets', match: (p) => p === '/' },
   { href: '/stocks', label: 'Stocks', match: (p) => p.startsWith('/stocks') },
   { href: '/funds', label: 'Mutual funds', match: (p) => p.startsWith('/funds') },
   { href: '/models', label: 'Models', match: (p) => p.startsWith('/models') },
@@ -40,15 +40,22 @@ export default function AppShell({ children }) {
           <UserMenu />
         </div>
       </header>
+      <div className="game-strip" role="note">
+        <div className="game-strip-inner">
+          <span>A learning project and a game with pretend buckets. Model outlooks are experiments, not investment advice. Not registered with SEBI.</span>
+          <Link href="/disclaimer">Read the disclaimer</Link>
+        </div>
+      </div>
 
       <main id="main" className="shell">{children}</main>
 
       <footer className="foot muted tiny">
-        Stock prices from Yahoo Finance (may be delayed); mutual fund NAVs from AMFI via mfapi.in (daily).
-        Signals are rules-based and statistical screens, not investment advice.
+        Stock prices from Yahoo Finance (may be delayed or wrong); mutual fund NAVs from AMFI via mfapi.in (daily).
+        Model outlooks are automated experiments, not recommendations. Nothing here is investment advice; don’t rely on it for real decisions.{' '}
+        <Link href="/disclaimer">Disclaimer</Link> · <Link href="/terms">Terms</Link>
       </footer>
 
-      <AddInvestment />
+      <AddToBucket />
       {toast && (
         <div className="toast" role="status">
           <span>{toast.text}</span>

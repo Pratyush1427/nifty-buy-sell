@@ -17,8 +17,8 @@ const FALLBACK_TABS = [
 
 // `score` comes from the active model: higher = more bullish under its rules.
 const SORTS = {
-  strength: { label: 'Strongest signal first', fn: (a, b) => (b.score ?? -1e9) - (a.score ?? -1e9) },
-  weakest: { label: 'Weakest signal first', fn: (a, b) => (a.score ?? 1e9) - (b.score ?? 1e9) },
+  strength: { label: 'Most bullish first', fn: (a, b) => (b.score ?? -1e9) - (a.score ?? -1e9) },
+  weakest: { label: 'Most bearish first', fn: (a, b) => (a.score ?? 1e9) - (b.score ?? 1e9) },
   change: { label: 'Biggest gainers today', fn: (a, b) => (b.changePct ?? -999) - (a.changePct ?? -999) },
   losers: { label: 'Biggest losers today', fn: (a, b) => (a.changePct ?? 999) - (b.changePct ?? 999) },
   name: { label: 'Name A–Z', fn: (a, b) => a.name.localeCompare(b.name) },
@@ -34,7 +34,7 @@ function formatValue(col, v) {
 /** Stocks: "What's worth a look?" A scannable list; detail lives on each stock's page. */
 export default function StocksPage() {
   const router = useRouter();
-  const { prefs, prefsReady, setPref, lots, watchlist, toggleWatch, loadWatchlist, showToast } = useApp();
+  const { prefs, prefsReady, setPref, pickedIn, watchlist, toggleWatch, loadWatchlist, showToast } = useApp();
   const [market, setMarket] = useState(null);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +45,6 @@ export default function StocksPage() {
   const tab = prefs.stockTab || 'nifty50';
   const sort = SORTS[prefs.sort] ? prefs.sort : 'strength';
   const strategy = getStrategy(prefs.strategy);
-  const held = useMemo(() => new Set(lots.map((l) => l.symbol)), [lots]);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -131,7 +130,7 @@ export default function StocksPage() {
           </button>
         ))}
         {market?.fx?.USD && (
-          <div className="bench fx" title="Used to convert US$ holdings to ₹">
+          <div className="bench fx" title="US dollar to rupee rate, for prices quoted in US$">
             <span className="bench-label">USD / INR</span>
             <span className="bench-price">₹{market.fx.USD.toFixed(2)}</span>
             <span className="bench-change muted">FX rate</span>
@@ -172,10 +171,10 @@ export default function StocksPage() {
 
         <div className="filters">
           <Segmented
-            label="Signal filter"
+            label="Outlook filter"
             value={filter}
             onChange={setFilter}
-            options={[['ALL', 'All'], ['BUY', 'Buy'], ['HOLD', 'Hold'], ['SELL', 'Sell']].map(([key, l]) => ({ key, label: l, count: counts[key] }))}
+            options={[['ALL', 'All'], ['BUY', 'Bullish'], ['HOLD', 'Neutral'], ['SELL', 'Bearish']].map(([key, l]) => ({ key, label: l, count: counts[key] }))}
           />
           <input className="input search" type="search" placeholder="Filter by name or symbol" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Filter list" />
           <select className="input" value={sort} onChange={(e) => setPref('sort', e.target.value)} aria-label="Sort">
@@ -212,7 +211,7 @@ export default function StocksPage() {
                   <tr key={s.symbol} className="clickable" onClick={() => router.push(hrefFor(s.symbol))}>
                     <td>
                       <a className="link name-primary" href={hrefFor(s.symbol)} onClick={(e) => { e.preventDefault(); router.push(hrefFor(s.symbol)); }}>{s.name}</a>
-                      {held.has(s.symbol) && <span className="held-tag">held</span>}
+                      {pickedIn.has(s.symbol) && <span className="held-tag" title={`In ${pickedIn.get(s.symbol).join(', ')}`}>in a bucket</span>}
                       {s.currency !== 'INR' && <span className="held-tag other">{s.currency}</span>}
                       <div className="muted tiny">{displaySymbol(s.symbol).replace(/\.BO$/, '')}{s.exchange ? ` · ${s.exchange}` : ''}</div>
                     </td>

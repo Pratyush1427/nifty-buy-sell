@@ -562,3 +562,34 @@ a.link.accent, .link.accent { color: var(--accent); }
 .prose { max-width: 760px; display: grid; gap: 10px; line-height: 1.6; font-size: 14.5px; }
 .prose h2 { margin: 14px 0 0; }
 .prose p, .prose ul { margin: 0; }
+
+/* buckets */
+.bucket-toolbar { display: flex; justify-content: flex-end; }
+.bucket { display: grid; gap: 14px; }
+.bucket-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 18px; align-items: center; }
+.bucket-title { display: grid; gap: 2px; min-width: 0; }
+.bucket-title h2 { margin: 0; overflow-wrap: anywhere; }
+.bucket-return { display: grid; justify-items: end; gap: 1px; }
+.bucket-return b { font-size: 24px; font-variant-numeric: tabular-nums; }
+.bucket-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.btn.small.danger { background: transparent; border-color: #f3c4c4; color: var(--critical-ink); }
+.new-bucket { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.new-bucket .input { width: auto; flex: 1; min-width: 200px; max-width: 360px; }
+.closed-picks summary { cursor: pointer; color: var(--text-2); }
+.closed-picks .table-scroll { margin-top: 8px; }
+.how-it-works { list-style: none; padding: 0; margin: 4px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; counter-reset: step; max-width: 640px; width: 100%; }
+.how-it-works li { counter-increment: step; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: grid; gap: 2px; text-align: left; }
+.how-it-works li::before { content: counter(step); font-weight: 800; color: var(--accent); }
+.how-it-works span { color: var(--text-3); font-size: 12.5px; }
+@media (max-width: 720px) {
+  .bucket-head { grid-template-columns: 1fr; }
+  .bucket-return { justify-items: start; }
+  .bucket-actions { justify-content: flex-start; }
+  .how-it-works { grid-template-columns: 1fr; }
+}
+
+/* always-visible "this is a game, not advice" strip under the header */
+.game-strip { background: var(--warning-bg); color: var(--warning-ink); font-size: 12.5px; }
+.game-strip-inner { max-width: 1240px; margin: 0 auto; padding: 6px 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.game-strip a { color: inherit; font-weight: 700; }
+.in-buckets { margin: 0; background: var(--accent-soft); color: var(--text-2); border-radius: 10px; padding: 8px 12px; }

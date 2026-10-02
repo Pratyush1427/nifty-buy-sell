@@ -1,19 +1,18 @@
 import { useRouter } from 'next/router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import PriceChart from '../../components/PriceChart';
 import { ModelSelect, PageHeader, SignalPill, SkeletonRows } from '../../components/ui';
-import { api, isStock, postJson, useApp, usePolling } from '../../lib/client';
-import { displaySymbol, money, percent, priceOf, qty, signedMoney, tone } from '../../lib/format';
+import { api, isStock, useApp, usePolling } from '../../lib/client';
+import { displaySymbol, percent, priceOf, tone } from '../../lib/format';
 import { STRATEGIES, STRATEGY_GROUPS, getStrategy } from '../../lib/strategies';
 
-/** Stock detail: "Should I act on this one?" */
+/** Stock detail: price, every model's outlook, and key numbers. */
 export default function StockPage() {
   const router = useRouter();
   const symbol = typeof router.query.symbol === 'string' ? router.query.symbol.toUpperCase() : null;
-  const { prefs, setPref, lots, watchlist, toggleWatch, openAdd, showToast } = useApp();
+  const { prefs, setPref, watchlist, toggleWatch, openPick, pickedIn } = useApp();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [mlBusy, setMlBusy] = useState(false);
   const strategy = getStrategy(prefs.strategy);
 
   const load = useCallback(async () => {
@@ -28,15 +27,6 @@ export default function StockPage() {
   usePolling(load, 60 * 1000, Boolean(symbol));
 
   const stock = data;
-  const position = useMemo(() => {
-    if (!stock) return null;
-    const mine = lots.filter((l) => l.symbol === stock.symbol);
-    if (!mine.length) return null;
-    const units = mine.reduce((s, l) => s + Number(l.shares), 0);
-    const cost = mine.reduce((s, l) => s + Number(l.shares) * Number(l.avg_price), 0);
-    const value = stock.price ? units * stock.price : null;
-    return { units, avg: cost / units, cost, value, pnl: value !== null ? value - cost : null, pnlPct: value !== null ? ((value - cost) / cost) * 100 : null, lots: mine.length };
-  }, [stock, lots]);
 
   if (error && !data) {
     return (
@@ -61,20 +51,6 @@ export default function StockPage() {
   const mlMissing = isStock(stock.symbol) && signals.ensemble?.signal === 'NO_DATA';
   const watched = watchlist.includes(stock.symbol);
   const v = (k, f) => signals[k]?.values?.[f];
-
-  const scoreWithMl = async () => {
-    setMlBusy(true);
-    try {
-      const r = await postJson('/api/ml-score', { symbol: stock.symbol });
-      const skipped = r.skipped?.find((x) => x.symbol === stock.symbol);
-      showToast(skipped ? `ML models skipped ${stock.name}: ${skipped.reason}.` : `ML scores ready for ${stock.name}.`);
-      await load();
-    } catch (e) {
-      showToast(`Couldn't score: ${e.message}`);
-    } finally {
-      setMlBusy(false);
-    }
-  };
 
   const stats = [
     ['52-week high', priceOf(stock.high52, stock), v('momentum', 'fromHighPct') !== undefined ? `${percent(-v('momentum', 'fromHighPct'))} from high` : null],
@@ -108,23 +84,19 @@ export default function StockPage() {
               {watched ? '★ Watching' : '☆ Watch'}
             </button>
             {isStock(stock.symbol) && (
-              <button type="button" className="btn primary" onClick={() => openAdd({ kind: 'stock', symbol: stock.symbol, name: stock.name, price: stock.price })}>+ Add to portfolio</button>
+              <button type="button" className="btn primary" onClick={() => openPick({ symbol: stock.symbol, name: stock.name })}>+ Add to bucket</button>
             )}
           </>
         )}
       />
 
-      {position && (
-        <section className="position-strip">
-          <div><span className="label">You own</span><b>{qty(position.units)}</b> <span className="muted small">@ {money(position.avg)} avg</span></div>
-          <div><span className="label">Value</span><b>{money(position.value, { whole: true })}</b></div>
-          <div><span className="label">P/L</span><b className={tone(position.pnl)}>{signedMoney(position.pnl, { whole: true })}</b> <span className={`small ${tone(position.pnl)}`}>{percent(position.pnlPct)}</span></div>
-        </section>
+      {pickedIn.has(stock.symbol) && (
+        <p className="in-buckets small">In your bucket{pickedIn.get(stock.symbol).length > 1 ? 's' : ''}: <b>{pickedIn.get(stock.symbol).join(', ')}</b></p>
       )}
 
       <section className="verdict-hero panel">
         <div className="vh-main">
-          <span className="label">Overall verdict</span>
+          <span className="label">Overall model outlook</span>
           <div className="vh-row">
             <SignalPill signal={overall?.signal || 'NO_DATA'} size="lg" />
             <p className="vh-reason">{overall?.reason}</p>
@@ -148,11 +120,9 @@ export default function StockPage() {
 
       <section className="panel">
         <div className="panel-head">
-          <h2>What each model says</h2>
+          <h2>Each model’s outlook</h2>
           {mlMissing && (
-            <button type="button" className="btn primary small" onClick={scoreWithMl} disabled={mlBusy}>
-              {mlBusy ? 'Scoring…' : 'Score with ML models'}
-            </button>
+            <span className="muted small">No ML outlook yet: stocks in a bucket or watchlist are scored in tonight’s run.</span>
           )}
         </div>
         {Object.values(signals).some((x) => x.signal === 'NA') && (
@@ -170,7 +140,7 @@ export default function StockPage() {
                     type="button"
                     className={`verdict ${strategy.key === st.key ? 'active' : ''} ${s?.signal === 'NA' ? 'na' : ''}`}
                     onClick={() => setPref('strategy', st.key)}
-                    title={`Show ${st.label} on the chart and use it for signals`}
+                    title={`Show ${st.label} on the chart and use it for outlooks`}
                   >
                     <span className="verdict-top">
                       <span className="verdict-name">{st.label}</span>

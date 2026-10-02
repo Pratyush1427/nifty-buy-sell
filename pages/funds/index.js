@@ -1,33 +1,23 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import HoldingsTable, { HoldingsTotals } from '../../components/HoldingsTable';
-import { PageHeader, Segmented, SkeletonRows, Tile } from '../../components/ui';
+import { PageHeader, Segmented, SkeletonRows } from '../../components/ui';
 import { api, fundCodeOf, isFund, useApp } from '../../lib/client';
-import { money, percent, signedMoney, tone } from '../../lib/format';
-import { usePortfolio } from '../../lib/usePortfolio';
+import { money, percent, tone } from '../../lib/format';
 
 const PLAN_FILTERS = [
   { key: 'all', label: 'All plans' },
   { key: 'direct', label: 'Direct Growth only' },
 ];
 
-/** Mutual funds: your funds first (like a broker's MF dashboard), then explore. */
+/** Mutual funds: find any scheme, compare it, follow it or add it to a bucket. */
 export default function FundsPage() {
-  const { openAdd, watchlist, toggleWatch, lotsLoaded } = useApp();
-  const { positions, fx, navDate } = usePortfolio();
+  const { openPick, watchlist, toggleWatch } = useApp();
   const [q, setQ] = useState('');
   const [results, setResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [planFilter, setPlanFilter] = useState('all');
   const [watchQuotes, setWatchQuotes] = useState({});
 
-  const myFunds = positions.filter((p) => p.assetClass === 'funds').sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
-  const t = myFunds.reduce((s, p) => ({
-    value: s.value + (p.value ?? p.invested),
-    invested: s.invested + p.invested,
-    day: s.day + (p.dayChange ?? 0),
-    prev: s.prev + (p.value !== null && p.dayChange !== null ? p.value - p.dayChange : 0),
-  }), { value: 0, invested: 0, day: 0, prev: 0 });
   const watchedFunds = watchlist.filter(isFund);
 
   useEffect(() => {
@@ -50,43 +40,14 @@ export default function FundsPage() {
   }, [watchedFunds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shown = (results || []).filter((f) => planFilter === 'all' || (f.plan === 'Direct' && f.option === 'Growth'));
-  const ret = t.value - t.invested;
 
   return (
     <>
       <PageHeader
         title="Mutual funds"
-        subtitle={navDate
-          ? `NAVs as of ${new Date(navDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · published by AMFI once a day, after market close`
-          : 'NAVs are published by AMFI once a day, after market close'}
-        actions={<button type="button" className="btn primary" onClick={() => openAdd({ kind: 'fund' })}>+ Add fund</button>}
+        subtitle="NAVs are published by AMFI once a day, after market close"
+        actions={<button type="button" className="btn primary" onClick={() => openPick({ kind: 'fund' })}>+ Add a fund to a bucket</button>}
       />
-
-      {!lotsLoaded ? <SkeletonRows rows={4} /> : myFunds.length > 0 ? (
-        <>
-          <section className="tiles">
-            <Tile label="Current value" value={money(t.value, { whole: true })} sub={`${myFunds.length} fund${myFunds.length > 1 ? 's' : ''}`} subTone="muted" />
-            <Tile label="Invested" value={money(t.invested, { whole: true })} sub="what you paid" subTone="muted" />
-            <Tile label="Total returns" value={signedMoney(ret, { whole: true })} tone={tone(ret)} sub={percent(t.invested ? (ret / t.invested) * 100 : null)} />
-            <Tile label="1D returns" value={signedMoney(t.day, { whole: true })} tone={tone(t.day)} sub={percent(t.prev ? (t.day / t.prev) * 100 : null)} />
-          </section>
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Your funds <span className="count-badge">{myFunds.length}</span></h2>
-            </div>
-            <HoldingsTable positions={myFunds} fx={fx} kind="funds" />
-            <HoldingsTotals positions={myFunds} />
-          </section>
-        </>
-      ) : (
-        <section className="panel empty-cta">
-          <div>
-            <h2>You haven&rsquo;t added any funds</h2>
-            <p className="muted small">Add the funds you hold, using the units and average NAV from your broker app or CAS statement, to track them here next to your stocks.</p>
-          </div>
-          <button type="button" className="btn primary" onClick={() => openAdd({ kind: 'fund' })}>+ Add a fund you own</button>
-        </section>
-      )}
 
       <section className="panel">
         <div className="panel-head">
@@ -155,7 +116,7 @@ export default function FundsPage() {
         <div className="panel explainer">
           <h2>How funds are judged here</h2>
           <p className="small">
-            Funds don&rsquo;t get BUY/SELL signals. Those are for short-term trading, and funds are held for years.
+            Funds don&rsquo;t get model outlooks. Those are short-term screens, and funds are usually held for years.
             Each fund page shows whether it has <b>beaten the Nifty 50 after fees</b> over 3 and 5 years, how deep its <b>worst fall</b> was,
             and whether you&rsquo;re in the <b>cheaper Direct plan</b>.
           </p>

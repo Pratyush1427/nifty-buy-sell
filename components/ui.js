@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { STRATEGIES, STRATEGY_GROUPS } from '../lib/strategies';
 
 const SIGNAL_ICON = { BUY: '▲', SELL: '▼', HOLD: '■', NO_DATA: '?', NA: '–', LOADING: '…' };
-const SIGNAL_LABEL = { NO_DATA: 'No data', NA: 'N/A', LOADING: 'Loading' };
+// Signals are shown as a model's outlook, never as an instruction to trade.
+export const SIGNAL_LABEL = { BUY: 'Bullish', HOLD: 'Neutral', SELL: 'Bearish', NO_DATA: 'No data', NA: 'N/A', LOADING: 'Loading' };
 
-/** BUY / HOLD / SELL chip: icon + label, never colour alone. */
+/** Model outlook chip (Bullish / Neutral / Bearish): icon + label, never colour alone. */
 export function SignalPill({ signal, title, size }) {
   const cls = { BUY: 'buy', SELL: 'sell', HOLD: 'hold' }[signal] || 'none';
   return (
@@ -62,7 +63,7 @@ export function PageHeader({ title, subtitle, actions, back }) {
 export function ModelSelect({ value, onChange }) {
   return (
     <label className="model-select">
-      <span>Signals by</span>
+      <span>Outlook by</span>
       <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
         {STRATEGY_GROUPS.map((g) => (
           <optgroup key={g.key} label={g.label}>
