@@ -1,0 +1,7 @@
+# Only the Next.js app deploys to Vercel. The ML pipeline runs on GitHub Actions
+# and the backtest is an offline script, so leave the Python code out.
+ml/
+backtest/
+.venv/
+docs/
+data/ml/
