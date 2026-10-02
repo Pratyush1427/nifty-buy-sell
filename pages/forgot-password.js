@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
-import { authRedirect } from '../lib/supabase/config';
+import { EMAIL_LINKS_ENABLED, authRedirect } from '../lib/supabase/config';
 import { supabaseBrowser } from '../lib/supabase/browser';
 
 export default function ForgotPassword() {
@@ -20,6 +20,19 @@ export default function ForgotPassword() {
     // Same message whether or not the account exists, so emails can't be probed.
     return router.push(`/check-email?kind=reset&email=${encodeURIComponent(email)}`);
   };
+
+  if (!EMAIL_LINKS_ENABLED) {
+    return (
+      <AuthLayout title="Reset password">
+        <h1>Password reset isn’t available yet</h1>
+        <p className="muted small" style={{ margin: 0 }}>
+          Stockpot doesn’t send emails yet, so passwords can’t be reset by email. If you’re signed in somewhere, you can
+          change your password from the Account page.
+        </p>
+        <p className="small muted" style={{ margin: 0 }}><Link href="/login">Back to sign in</Link></p>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout title="Reset password">

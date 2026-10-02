@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
 import GoogleButton from '../components/GoogleButton';
-import { authRedirect, safeNext } from '../lib/supabase/config';
+import { EMAIL_LINKS_ENABLED, authRedirect, safeNext } from '../lib/supabase/config';
 import { supabaseBrowser } from '../lib/supabase/browser';
 
 const LINK_ERRORS = {
@@ -71,19 +71,21 @@ export default function Login() {
         {error && (
           <p className="form-error" role="alert">
             {error}{' '}
-            {unconfirmed && <button type="button" className="link accent" onClick={resend}>Resend confirmation email</button>}
+            {unconfirmed && EMAIL_LINKS_ENABLED && <button type="button" className="link accent" onClick={resend}>Resend confirmation email</button>}
           </p>
         )}
         <button className="btn primary block" disabled={busy}>
           {mode === 'magic' ? 'Email me a sign-in link' : 'Sign in'}
         </button>
       </form>
+      {EMAIL_LINKS_ENABLED && (
       <p className="small" style={{ margin: 0 }}>
         {mode === 'password'
           ? <button type="button" className="link accent" onClick={() => { setMode('magic'); setError(null); }}>Sign in with an email link instead</button>
           : <button type="button" className="link accent" onClick={() => { setMode('password'); setError(null); }}>Use a password instead</button>}
         {mode === 'password' && <> · <Link href="/forgot-password">Forgot password?</Link></>}
       </p>
+      )}
       <p className="small muted" style={{ margin: 0 }}>
         New here? <Link href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>Create an account</Link>
       </p>

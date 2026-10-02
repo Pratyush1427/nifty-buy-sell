@@ -67,7 +67,9 @@ technical rules (52-week breakout, 50/200-day averages, MACD, RSI, Bollinger ban
 
 ## Accounts and privacy
 
-- **Sign in** with email and password (confirmed by email), an email magic link, or Google, via Supabase Auth.
+- **Sign in** with email and password via Supabase Auth. Email confirmation, magic links and password reset are
+  built but switched off (`NEXT_PUBLIC_AUTH_EMAIL_LINKS`) until a custom email sender is set up; Google sign-in is
+  optional.
 - **Onboarding consent:** before using the app, every user picks a name and avatar and ticks five acknowledgements
   (a learning game, not advice and not SEBI-registered, unreliable data, 18+, own responsibility). Consent is stored
   with a timestamp and checked server-side on every request; users can’t grant it to themselves.

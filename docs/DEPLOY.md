@@ -30,10 +30,12 @@ dashboards, or a local `.env.production.local` file, which git ignores. Never co
 5. **Project Settings → API Keys**: note the **publishable key** (`sb_publishable_…`) and create/copy a
    **secret key** (`sb_secret_…`).
 
-## 2. Sign-in emails (Gmail SMTP)
+## 2. Sign-in emails (optional, Gmail SMTP)
 
-Supabase’s built-in mailer sends only a couple of emails an hour. A dedicated Gmail account works for free
-(about 500 emails a day):
+By default Stockpot sends no email: sign-up needs no confirmation (Supabase → Authentication → Sign In /
+Providers → Email → **Confirm email** off) and `NEXT_PUBLIC_AUTH_EMAIL_LINKS=false` hides magic links and
+password reset. Supabase’s built-in mailer only delivers to your own team, about 2 emails an hour. To turn email
+on, use a custom sender. A dedicated Gmail account works for free (about 500 emails a day):
 
 1. Create a new Gmail account for the app, turn on **2-Step Verification**, then create an
    **App password** (Google Account → Security → App passwords).
@@ -53,7 +55,7 @@ Supabase’s built-in mailer sends only a couple of emails an hour. A dedicated 
 
 Supabase → **Authentication**:
 
-- **Sign In / Providers → Email**: enabled, **Confirm email** on; minimum password length **8**;
+- **Sign In / Providers → Email**: enabled; **Confirm email** off unless email is set up (step 2); minimum password length **8**;
   password requirements **letters and digits**.
 - **URL Configuration** (after step 4 gives you the Vercel address):
   - Site URL: `https://<your-app>.vercel.app`
