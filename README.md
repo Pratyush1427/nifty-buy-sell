@@ -33,16 +33,17 @@ and see how your ideas would have done at real closing prices.**
 ## How the game works
 
 1. **Make a bucket for an idea.** “Banks I like”, “Gold as a hedge”, “IT turnaround”. Up to 5 buckets.
-2. **Add picks.** Any NSE/BSE stock or ETF (one-tap gold and silver), or any mutual fund by name. Up to 25 per bucket.
-3. **Each pick locks in at a closing price.** Added before 3:30 pm IST on a trading day: that day’s close.
-   Later, or on a weekend or holiday: the next trading day’s close. There are no live prices in the game.
-4. **Track it.** Each pick shows its return from entry close to the latest close. A bucket’s return is the plain
-   average of its picks: no quantities or money, so every pick counts equally.
-5. **Removing a pick** exits it at the next close, and its result **stays in the bucket’s record**, so losing picks
+2. **Add picks.** Any NSE/BSE stock or ETF (one-tap gold and silver), or any mutual fund by name, with a
+   **quantity**, a **buy date** and, optionally, **your buy price**. Up to 25 per bucket.
+3. **No price typed? It takes a closing price:** the close of the buy date (for today: today’s close after 3:30 pm
+   IST, or the next trading day’s). Typed prices are the user’s own record and aren’t checked.
+4. **Track the P&L.** Each pick and bucket shows invested amount, value at the latest close, P&L in ₹ and %, the
+   day’s change and allocation across stocks, funds and metals. Valuation uses closing prices only.
+5. **Removing a pick** exits it at the next close, and its P&L **stays in the bucket’s record**, so losing picks
    can’t be quietly hidden.
 
-Everything is end-of-day on purpose: SEBI and the exchanges have warned against virtual-trading games built on
-real-time prices. There is no leaderboard and nothing to win; buckets are private.
+Valuation is end-of-day on purpose: SEBI and the exchanges have warned against virtual-trading games built on
+real-time prices. There is no leaderboard and nothing to win; buckets are private, and nothing connects to a broker.
 
 ![Add to bucket dialog with stock search, gold and silver shortcuts, and the lock-in rule](docs/images/add-to-bucket.png)
 

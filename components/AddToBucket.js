@@ -16,6 +16,8 @@ const METALS = [
 ];
 const NEW = '__new__';
 
+const lockDay = (iso) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '');
+
 /** "Locks in at today's close" / "…at the close on Mon 5 Oct", from the same rule the server uses. */
 export function lockInText(now = new Date()) {
   const day = closingDay(now);
@@ -35,6 +37,9 @@ export default function AddToBucket() {
   const [picked, setPicked] = useState(null);
   const [bucketId, setBucketId] = useState('');
   const [newName, setNewName] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [price, setPrice] = useState('');
+  const [date, setDate] = useState('');
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const dialogRef = useRef(null);
@@ -47,6 +52,9 @@ export default function AddToBucket() {
     setPicked(p.symbol ? { symbol: p.symbol, name: p.name } : null);
     setBucketId(p.bucketId || buckets[0]?.id || NEW);
     setNewName(buckets.length ? '' : 'My first bucket');
+    setQuantity('1');
+    setPrice('');
+    setDate(istClock().date);
     setMsg(null);
     setTimeout(() => dialogRef.current?.querySelector('input')?.focus(), 30);
     // Only when the dialog opens, not when buckets reload behind it.
@@ -77,9 +85,20 @@ export default function AddToBucket() {
         target = created.id;
         bucketName = created.name;
       }
-      const pick = await postJson('/api/picks', { bucketId: target, symbol });
+      const today = istClock().date;
+      const pick = await postJson('/api/picks', {
+        bucketId: target,
+        symbol,
+        quantity,
+        price: price.trim() || undefined,
+        // Without a price, today means "the next close"; an earlier date backfills from that day's close.
+        date: price.trim() || date !== today ? date : undefined,
+      });
       await loadBuckets();
-      showToast(pick.warning || `Added ${picked?.name || displaySymbol(pick.symbol)} to “${bucketName}”. It locks in at ${lockInText()}.`);
+      const label = preset ? pickDialog.name || displaySymbol(pickDialog.symbol) : picked?.name || displaySymbol(pick.symbol);
+      showToast(pick.warning || (pick.entry_price
+        ? `Added ${label} to “${bucketName}”.`
+        : `Added ${label} to “${bucketName}”. Its buy price is the closing price of ${lockDay(pick.entry_date)}.`));
       closePick();
     } catch (error) {
       setMsg({ kind: 'error', text: error.message });
@@ -138,6 +157,21 @@ export default function AddToBucket() {
             </>
           )}
 
+          <div className="form-row three">
+            <label>
+              <span>Quantity</span>
+              <input className="input" name="quantity" type="number" min="0" step="any" required value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            </label>
+            <label>
+              <span>Buy price (₹)</span>
+              <input className="input" name="price" type="number" min="0" step="any" placeholder="closing price" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </label>
+            <label>
+              <span>Buy date</span>
+              <input className="input" name="date" type="date" max={istClock().date} min="2000-01-01" required value={date} onChange={(e) => setDate(e.target.value)} />
+            </label>
+          </div>
+
           <fieldset className="form" style={{ border: 0, padding: 0, margin: 0, gap: 8 }}>
             <legend className="small" style={{ fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>Bucket</legend>
             {buckets.map((b) => (
@@ -158,7 +192,9 @@ export default function AddToBucket() {
           </fieldset>
 
           <p className="muted tiny" style={{ margin: 0 }}>
-            Pretend only: no money or quantity. It locks in at <strong>{lockInText()}</strong> (or the next trading day’s, if the market is shut), and every pick in a bucket counts equally.
+            {price.trim()
+              ? 'Uses the buy price you entered. Prices you type are your own record: they aren’t checked, and nothing here connects to a broker.'
+              : <>No price entered, so it uses <strong>{date === istClock().date ? lockInText() : `the closing price on ${lockDay(date)}`}</strong> (or the next trading day’s, if the market was shut).</>}
           </p>
           <Message msg={msg} />
           <div className="modal-actions">

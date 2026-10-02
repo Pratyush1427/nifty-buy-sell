@@ -1,20 +1,23 @@
 import Link from 'next/link';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { lockInText } from '../components/AddToBucket';
-import { ModelSelect, PageHeader, SignalPill, SkeletonRows } from '../components/ui';
-import { api, hrefFor, isFund, postJson, useApp, usePolling } from '../lib/client';
-import { displaySymbol, money, percent, tone } from '../lib/format';
+import { Message, ModelSelect, PageHeader, SignalPill, SkeletonRows, Tile } from '../components/ui';
+import { istClock } from '../lib/closingDay';
+import { ASSET_CLASSES, api, assetClassOf, hrefFor, isFund, postJson, useApp, usePolling } from '../lib/client';
+import { displaySymbol, money, percent, qty, signedMoney, tone } from '../lib/format';
 import { getStrategy } from '../lib/strategies';
 
 const MAX_BUCKETS = 5;
 const day = (iso) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—');
+const sum = (xs) => xs.reduce((a, b) => a + b, 0);
 
-/** My buckets: pretend collections of picks, valued at end-of-day closing prices. */
+/** My buckets: pretend collections of picks with the user's quantity and buy price, valued at closing prices. */
 export default function BucketsPage() {
   const { buckets, bucketsLoaded, loadBuckets, openPick, prefs, setPref, showToast } = useApp();
   const strategy = getStrategy(prefs.strategy);
-  const outlooks = useOutlooks(buckets, strategy.key);
+  const info = useInstrumentInfo(buckets, strategy.key);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   const createBucket = async (name) => {
     try {
@@ -27,15 +30,6 @@ export default function BucketsPage() {
       return false;
     }
   };
-
-  const actions = (
-    <>
-      {buckets.length > 0 && buckets.length < MAX_BUCKETS && (
-        <button type="button" className="btn ghost" onClick={() => setCreating(true)}>New bucket</button>
-      )}
-      {buckets.length > 0 && <button type="button" className="btn primary" onClick={() => openPick()}>+ Add a pick</button>}
-    </>
-  );
 
   if (!bucketsLoaded) {
     return (
@@ -53,13 +47,13 @@ export default function BucketsPage() {
         <section className="panel onboarding">
           <h2>Build your first bucket</h2>
           <p className="muted" style={{ maxWidth: 560 }}>
-            A bucket is a pretend collection for an idea, like “Banks I like” or “Gold as a hedge”. Add stocks, mutual funds,
-            gold or silver, and see how the idea would have done at real closing prices. No money, no quantities: just learning.
+            A bucket is a collection for an idea, like “Banks I like” or “Gold as a hedge”. Add stocks, mutual funds,
+            gold or silver with a quantity and buy price, and see how the idea does at real closing prices. Just for learning.
           </p>
           <ol className="how-it-works">
             <li><b>Name an idea</b><span>Up to {MAX_BUCKETS} buckets</span></li>
-            <li><b>Add picks</b><span>Stocks, ETFs, funds, gold, silver</span></li>
-            <li><b>Each pick locks in at a close</b><span>Then track it day by day</span></li>
+            <li><b>Add picks</b><span>Quantity, and your buy price (or the closing price)</span></li>
+            <li><b>Track the P&amp;L</b><span>Value, profit and loss, and allocation at each close</span></li>
           </ol>
           <NewBucketForm onCreate={createBucket} initial="My first bucket" />
           <p className="muted small">Or browse <Link className="link accent" href="/stocks">stocks</Link> and <Link className="link accent" href="/funds">mutual funds</Link> first.</p>
@@ -68,13 +62,39 @@ export default function BucketsPage() {
     );
   }
 
+  const withValue = buckets.filter((b) => b.value != null);
+  const withDay = buckets.filter((b) => b.dayChange != null);
+  const totals = {
+    invested: sum(withValue.map((b) => b.invested)),
+    value: sum(withValue.map((b) => b.value)),
+    day: sum(withDay.map((b) => b.dayChange)),
+    dayBase: sum(withDay.map((b) => b.value - b.dayChange)),
+  };
+  const totalPnl = totals.value - totals.invested;
+  const pickCount = sum(buckets.map((b) => b.openCount));
+
   return (
     <>
       <PageHeader
         title="My buckets"
-        subtitle={<span className="muted">A game with pretend picks, valued at end-of-day closing prices. Not investment advice.</span>}
-        actions={actions}
+        subtitle={<span className="muted">Valued at end-of-day closing prices. A learning tool, not investment advice.</span>}
+        actions={(
+          <>
+            {buckets.length < MAX_BUCKETS && <button type="button" className="btn ghost" onClick={() => setCreating(true)}>New bucket</button>}
+            <button type="button" className="btn primary" onClick={() => openPick()}>+ Add a pick</button>
+          </>
+        )}
       />
+
+      {withValue.length > 0 && (
+        <section className="tiles">
+          <Tile label="Current value" value={money(totals.value, { whole: true })} sub={`${pickCount} pick${pickCount === 1 ? '' : 's'} in ${buckets.length} bucket${buckets.length === 1 ? '' : 's'}`} subTone="muted" />
+          <Tile label="Invested" value={money(totals.invested, { whole: true })} sub="at your buy prices" subTone="muted" />
+          <Tile label="Total P&L" value={signedMoney(totalPnl, { whole: true })} tone={tone(totalPnl)} sub={percent(totals.invested ? (totalPnl / totals.invested) * 100 : null)} />
+          <Tile label="Day’s change" value={signedMoney(totals.day, { whole: true })} tone={tone(totals.day)} sub={totals.dayBase ? percent((totals.day / totals.dayBase) * 100) : 'at the latest close'} />
+        </section>
+      )}
+
       {creating && (
         <section className="panel">
           <h2>New bucket</h2>
@@ -85,12 +105,14 @@ export default function BucketsPage() {
         <ModelSelect value={prefs.strategy} onChange={(v) => setPref('strategy', v)} />
       </div>
       {buckets.map((b) => (
-        <Bucket key={b.id} bucket={b} outlooks={outlooks} strategy={strategy} onAdd={() => openPick({ bucketId: b.id })} />
+        <Bucket key={b.id} bucket={b} info={info} strategy={strategy} onAdd={() => openPick({ bucketId: b.id })} onEdit={setEditing} />
       ))}
       <p className="muted tiny table-foot">
-        Returns use closing prices only: from each pick’s entry close to the latest close (or its exit close once removed).
-        A bucket’s return is the plain average of its picks, removed ones included. Model outlooks are experimental and are not recommendations.
+        Values use end-of-day closing prices. Buy prices you type are your own record and aren’t checked; nothing here
+        connects to a broker. Removed picks keep counting at their exit price, so a bucket’s P&amp;L includes them.
+        Model outlooks are experimental and are not recommendations.
       </p>
+      {editing && <EditPick pick={editing} name={info[editing.symbol]?.name} onClose={() => setEditing(null)} />}
     </>
   );
 }
@@ -116,7 +138,7 @@ function NewBucketForm({ onCreate, onCancel, initial = '' }) {
  * Display names for every pick (stocks from the market feed, funds from AMFI),
  * plus the model outlook, under the chosen model, for every stock in a bucket.
  */
-function useOutlooks(buckets, strategyKey) {
+function useInstrumentInfo(buckets, strategyKey) {
   const all = useMemo(() => [...new Set(buckets.flatMap((b) => b.picks.map((p) => p.symbol)))].sort(), [buckets]);
   const stocks = all.filter((s) => !isFund(s)).join(',');
   const funds = all.filter(isFund).join(',');
@@ -131,7 +153,7 @@ function useOutlooks(buckets, strategyKey) {
       setMarket(m);
       setFundInfo(f);
     } catch {
-      /* names and outlooks are nice-to-haves; the table still shows symbols and returns */
+      /* names and outlooks are nice-to-haves; the table still shows symbols and values */
     }
   }, [stocks, funds]);
   usePolling(load, 10 * 60 * 1000, true);
@@ -143,13 +165,35 @@ function useOutlooks(buckets, strategyKey) {
   }, [market, fundInfo, strategyKey]);
 }
 
-function Bucket({ bucket, outlooks, strategy, onAdd }) {
+/** Part-to-whole by asset class, by current value. */
+function Allocation({ picks, info }) {
+  const open = picks.filter((p) => p.status !== 'closed' && p.value != null);
+  const total = sum(open.map((p) => p.value));
+  if (!total) return null;
+  const parts = ASSET_CLASSES.map((c) => {
+    const items = open.filter((p) => assetClassOf(p.symbol, info[p.symbol]?.name || '') === c.key);
+    return { ...c, count: items.length, pct: (sum(items.map((p) => p.value)) / total) * 100 };
+  }).filter((c) => c.count > 0);
+  return (
+    <div className="alloc compact">
+      <div className="alloc-bar" role="img" aria-label={parts.map((a) => `${a.label} ${a.pct.toFixed(0)}%`).join(', ')}>
+        {parts.map((a) => <span key={a.key} className={`alloc-seg ${a.cls}`} style={{ width: `${a.pct}%` }} title={`${a.label}: ${a.pct.toFixed(1)}%`} />)}
+      </div>
+      <ul className="alloc-legend inline">
+        {parts.map((a) => (
+          <li key={a.key}><i className={`swatch sq ${a.cls}`} /><span>{a.label}</span><span className="muted">{a.pct.toFixed(0)}%</span></li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function Bucket({ bucket, info, strategy, onAdd, onEdit }) {
   const { loadBuckets, showToast } = useApp();
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(bucket.name);
   const open = bucket.picks.filter((p) => p.status !== 'closed');
   const closed = bucket.picks.filter((p) => p.status === 'closed');
-  const priced = bucket.picks.filter((p) => p.returnPct != null).length;
 
   const rename = async (e) => {
     e.preventDefault();
@@ -187,14 +231,9 @@ function Bucket({ bucket, outlooks, strategy, onAdd }) {
           )}
           <span className="muted small">
             {open.length} pick{open.length === 1 ? '' : 's'}
-            {bucket.pendingCount > 0 && ` · ${bucket.pendingCount} locking in`}
+            {bucket.pendingCount > 0 && ` · ${bucket.pendingCount} waiting for a closing price`}
             {closed.length > 0 && ` · ${closed.length} removed`}
           </span>
-        </div>
-        <div className="bucket-return">
-          <span className="label">Bucket return</span>
-          <b className={tone(bucket.returnPct)}>{priced ? percent(bucket.returnPct) : '—'}</b>
-          <span className="muted tiny">{priced ? `average of ${priced} pick${priced === 1 ? '' : 's'}` : 'after the first close'}</span>
         </div>
         <div className="bucket-actions">
           <button type="button" className="btn primary small" onClick={onAdd}>+ Add pick</button>
@@ -202,6 +241,16 @@ function Bucket({ bucket, outlooks, strategy, onAdd }) {
           <button type="button" className="btn ghost small danger" onClick={remove}>Delete</button>
         </div>
       </div>
+
+      {bucket.value != null && (
+        <div className="bucket-stats">
+          <div><span className="label">Invested</span><b>{money(bucket.invested, { whole: true })}</b></div>
+          <div><span className="label">Value</span><b>{money(bucket.value, { whole: true })}</b></div>
+          <div><span className="label">P&amp;L</span><b className={tone(bucket.pnl)}>{signedMoney(bucket.pnl, { whole: true })}</b> <span className={`small ${tone(bucket.pnl)}`}>{percent(bucket.returnPct)}</span></div>
+          <div><span className="label">Day’s change</span><b className={tone(bucket.dayChange)}>{bucket.dayChange != null ? signedMoney(bucket.dayChange, { whole: true }) : '—'}</b> <span className={`small ${tone(bucket.dayChange)}`}>{percent(bucket.dayChangePct)}</span></div>
+          <Allocation picks={bucket.picks} info={info} />
+        </div>
+      )}
 
       {open.length === 0 ? (
         <div className="empty">No picks yet. <button type="button" className="link accent" onClick={onAdd}>Add a stock, fund, gold or silver</button>.</div>
@@ -212,15 +261,18 @@ function Bucket({ bucket, outlooks, strategy, onAdd }) {
               <tr>
                 <th>Pick</th>
                 <th>Outlook ({strategy.label})</th>
-                <th>Entered</th>
-                <th className="num">Entry close</th>
+                <th className="num">Qty</th>
+                <th className="num">Avg buy</th>
+                <th className="num">Invested</th>
                 <th className="num">Latest close</th>
-                <th className="num">Return</th>
+                <th className="num">Value</th>
+                <th className="num">P&amp;L</th>
+                <th className="num">Day</th>
                 <th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
-              {open.map((p) => <PickRow key={p.id} pick={p} outlook={outlooks[p.symbol]} />)}
+              {open.map((p) => <PickRow key={p.id} pick={p} info={info[p.symbol]} onEdit={() => onEdit(p)} />)}
             </tbody>
           </table>
         </div>
@@ -228,21 +280,24 @@ function Bucket({ bucket, outlooks, strategy, onAdd }) {
 
       {closed.length > 0 && (
         <details className="closed-picks">
-          <summary className="small">Removed picks ({closed.length}), still counted in the bucket’s return</summary>
+          <summary className="small">Removed picks ({closed.length}), still counted in the bucket’s P&amp;L</summary>
           <div className="table-scroll">
             <table className="table">
               <thead>
-                <tr><th>Pick</th><th>Entered</th><th className="num">Entry close</th><th>Exited</th><th className="num">Exit close</th><th className="num">Return</th></tr>
+                <tr><th>Pick</th><th className="num">Qty</th><th className="num">Avg buy</th><th>Exited</th><th className="num">Exit close</th><th className="num">P&amp;L</th></tr>
               </thead>
               <tbody>
                 {closed.map((p) => (
                   <tr key={p.id}>
-                    <td><Link className="link" href={hrefFor(p.symbol)}>{outlooks[p.symbol]?.name || displaySymbol(p.symbol)}</Link></td>
-                    <td>{day(p.entry_date)}</td>
+                    <td><Link className="link" href={hrefFor(p.symbol)}>{info[p.symbol]?.name || displaySymbol(p.symbol)}</Link></td>
+                    <td className="num">{qty(p.quantity)}</td>
                     <td className="num">{money(p.entry_price)}</td>
                     <td>{p.exit_price ? day(p.exit_date) : <span className="muted">at {day(p.exit_date)} close</span>}</td>
                     <td className="num">{money(p.exit_price)}</td>
-                    <td className={`num ${tone(p.returnPct)}`}>{percent(p.returnPct)}{!p.exit_price && p.returnPct != null && <span className="muted tiny"> so far</span>}</td>
+                    <td className={`num ${tone(p.pnl)}`}>
+                      {signedMoney(p.pnl, { whole: true })} <span className="tiny">{percent(p.returnPct)}</span>
+                      {!p.exit_price && p.pnl != null && <span className="muted tiny"> so far</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -254,15 +309,15 @@ function Bucket({ bucket, outlooks, strategy, onAdd }) {
   );
 }
 
-function PickRow({ pick, outlook }) {
+function PickRow({ pick, info, onEdit }) {
   const { loadBuckets, showToast } = useApp();
-  const label = outlook?.name || displaySymbol(pick.symbol);
+  const label = info?.name || displaySymbol(pick.symbol);
   const pending = pick.status === 'pending';
 
   const removePick = async () => {
     const msg = pending
-      ? `Remove ${label}? It hasn’t locked in yet, so it will simply be dropped.`
-      : `Remove ${label}? It exits at ${lockInText()}, and its result stays in this bucket’s record.`;
+      ? `Remove ${label}? It hasn’t got a buy price yet, so it will simply be dropped.`
+      : `Remove ${label}? It exits at ${lockInText()}, and its P&L stays in this bucket’s record.`;
     if (!window.confirm(msg)) return;
     try {
       await api(`/api/picks?id=${pick.id}`, { method: 'DELETE' });
@@ -276,24 +331,102 @@ function PickRow({ pick, outlook }) {
     <tr>
       <td>
         <Link className="link" href={hrefFor(pick.symbol)}><b>{label}</b></Link>
-        <div className="muted tiny">{isFund(pick.symbol) ? `Mutual fund · AMFI ${pick.symbol.slice(3)}` : displaySymbol(pick.symbol)}</div>
+        <div className="muted tiny">
+          {isFund(pick.symbol) ? `Mutual fund · AMFI ${pick.symbol.slice(3)}` : displaySymbol(pick.symbol)}
+          {' · '}bought {day(pick.entry_date)}
+        </div>
       </td>
-      <td>{isFund(pick.symbol) ? <span className="muted tiny">Funds have no outlook</span> : <SignalPill signal={outlook?.signal || 'LOADING'} title={outlook?.reason} />}</td>
+      <td>{isFund(pick.symbol) ? <span className="muted tiny">No outlook for funds</span> : <SignalPill signal={info?.signal || 'LOADING'} title={info?.reason} />}</td>
+      <td className="num">{qty(pick.quantity)}</td>
       {pending ? (
-        <td colSpan={3}>
-          <span className="chip warn" title={`At the close on ${day(pick.entry_date)}, or the next trading day’s if the market is shut that day`}>
-            Locks in at the next close
+        <td colSpan={4}>
+          <span className="chip warn" title={`The closing price on ${day(pick.entry_date)}, or the next trading day’s if the market is shut that day`}>
+            Buy price: next closing price
           </span>
         </td>
       ) : (
         <>
-          <td>{day(pick.entry_date)}</td>
-          <td className="num">{money(pick.entry_price)}</td>
+          <td className="num">
+            {money(pick.entry_price)}
+            <div className="muted tiny">{pick.price_source === 'manual' ? 'your price' : 'closing price'}</div>
+          </td>
+          <td className="num">{money(pick.invested, { whole: true })}</td>
           <td className="num">{money(pick.lastClose)}<div className="muted tiny">{day(pick.lastCloseDate)}</div></td>
+          <td className="num">{money(pick.value, { whole: true })}</td>
         </>
       )}
-      <td className={`num ${tone(pick.returnPct)}`}><b>{pending ? '—' : percent(pick.returnPct)}</b></td>
-      <td className="actions"><button type="button" className="btn ghost small" onClick={removePick} aria-label={`Remove ${label}`}>Remove</button></td>
+      <td className={`num ${tone(pick.pnl)}`}>
+        <b>{pending ? '—' : signedMoney(pick.pnl, { whole: true })}</b>
+        {!pending && <div className="tiny">{percent(pick.returnPct)}</div>}
+      </td>
+      <td className={`num ${tone(pick.dayChange)}`}>
+        {pick.dayChange != null ? signedMoney(pick.dayChange, { whole: true }) : '—'}
+        {pick.dayChangePct != null && <div className="tiny">{percent(pick.dayChangePct)}</div>}
+      </td>
+      <td className="actions">
+        <button type="button" className="btn ghost small" onClick={onEdit} aria-label={`Edit ${label}`}>Edit</button>{' '}
+        <button type="button" className="btn ghost small" onClick={removePick} aria-label={`Remove ${label}`}>Remove</button>
+      </td>
     </tr>
+  );
+}
+
+/** Change a pick's quantity, buy price or buy date. A blank price means "use the closing price". */
+function EditPick({ pick, name, onClose }) {
+  const { loadBuckets, showToast } = useApp();
+  const [quantity, setQuantity] = useState(String(pick.quantity));
+  const [price, setPrice] = useState(pick.price_source === 'manual' ? String(pick.entry_price) : '');
+  const [date, setDate] = useState(pick.entry_date);
+  const [msg, setMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await postJson('/api/picks', { id: pick.id, quantity, price: price.trim() || null, date }, 'PATCH');
+      await loadBuckets();
+      showToast(`Updated ${name || displaySymbol(pick.symbol)}.`);
+      onClose();
+    } catch (error) {
+      setMsg({ kind: 'error', text: error.message });
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+        <div className="modal-head">
+          <h2 id="edit-title">Edit {name || displaySymbol(pick.symbol)}</h2>
+          <button type="button" className="btn ghost small icon" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <form className="form" onSubmit={save}>
+          <div className="form-row three">
+            <label><span>Quantity</span>
+              <input className="input" type="number" min="0" step="any" required autoFocus value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            </label>
+            <label><span>Buy price (₹)</span>
+              <input className="input" type="number" min="0" step="any" placeholder="closing price" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </label>
+            <label><span>Buy date</span>
+              <input className="input" type="date" min="2000-01-01" max={istClock().date} required value={date} onChange={(e) => setDate(e.target.value)} />
+            </label>
+          </div>
+          <p className="muted tiny" style={{ margin: 0 }}>Leave the price blank to use the closing price of the buy date.</p>
+          <Message msg={msg} />
+          <div className="modal-actions">
+            <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

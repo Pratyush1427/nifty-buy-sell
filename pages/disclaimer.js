@@ -23,8 +23,9 @@ export default function Disclaimer() {
 
       <h2>Buckets are pretend</h2>
       <p>
-        Buckets are a game. No real money, orders, trades or holdings are involved, nothing can be won, and nothing is
-        connected to any broker or exchange. Picks are valued at end-of-day closing prices only.
+        Buckets are a learning tool you fill in yourself. No real money, orders or trades are involved, nothing can be
+        won, and nothing is connected to any broker or exchange. Quantities and buy prices you type are your own record
+        and are never checked. Picks are valued at end-of-day closing prices only.
       </p>
 
       <h2>Data may be wrong or late</h2>

@@ -12,8 +12,9 @@ export default function Terms() {
 
       <h2>What this is</h2>
       <p>
-        A free, non-commercial learning project: a game where you build pretend buckets of stocks, mutual funds, gold and
-        silver and see how they would have done at closing prices, alongside experimental model outlooks. It is not a
+        A free, non-commercial learning project: you build buckets of stocks, mutual funds, gold and silver, with
+        quantities and buy prices you enter yourself, and see how they do at closing prices, alongside experimental
+        model outlooks. What you enter is not checked and is not connected to any broker. It is not a
         brokerage, an advisory service or a research service.
       </p>
 
