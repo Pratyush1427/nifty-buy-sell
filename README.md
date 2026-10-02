@@ -106,7 +106,7 @@ You need Node 20+, Docker Desktop and Python 3.9+.
 ```bash
 npm install
 npm run db:start               # local Supabase (Postgres + Auth + test inbox) in Docker
-cp .env.example .env.local     # local values already filled in
+npm run env:local              # writes .env.local with the local connection details
 
 python3 -m venv .venv && .venv/bin/pip install -r ml/requirements.txt
 npm run ml                     # first run trains the models and writes scores (~6 minutes)

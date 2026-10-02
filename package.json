@@ -10,7 +10,8 @@
     "ml:predict": ".venv/bin/python -W ignore -m ml.run --predict",
     "db:start": "supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor",
     "db:stop": "supabase stop",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "env:local": "node scripts/env-local.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
