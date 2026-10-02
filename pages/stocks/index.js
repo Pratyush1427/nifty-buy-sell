@@ -12,7 +12,7 @@ const CLOSED_MS = 5 * 60 * 1000;
 const WATCH = 'watchlist';
 const FALLBACK_TABS = [
   { key: 'nifty50', label: 'Nifty 50' }, { key: 'nifty200', label: 'Nifty 200' }, { key: 'sensex', label: 'Sensex' },
-  { key: 'gold', label: 'Gold' }, { key: 'silver', label: 'Silver' }, { key: WATCH, label: 'Watchlist' },
+  { key: 'gold', label: 'Gold' }, { key: 'silver', label: 'Silver' }, { key: 'us', label: 'US stocks' }, { key: WATCH, label: 'Watchlist' },
 ];
 
 // `score` comes from the active model: higher = more bullish under its rules.
@@ -163,7 +163,7 @@ export default function StocksPage() {
               value={watchInput}
               onChange={setWatchInput}
               onPick={(item) => addWatch(item.symbol)}
-              inputProps={{ placeholder: 'Add any NSE/BSE stock, e.g. "irctc" or "suzlon"', 'aria-label': 'Add to watchlist' }}
+              inputProps={{ placeholder: 'Add any NSE, BSE or US stock, e.g. "irctc" or "amazon"', 'aria-label': 'Add to watchlist' }}
             />
             <button type="submit" className="btn primary" disabled={!watchInput.trim()}>Add</button>
           </form>
@@ -184,7 +184,7 @@ export default function StocksPage() {
 
         {!loaded && <SkeletonRows />}
         {loaded && tab === WATCH && rows.length === 0 && (
-          <div className="empty">Your watchlist is empty. Add any NSE or BSE stock above, or use the search at the top of the page.</div>
+          <div className="empty">Your watchlist is empty. Add any NSE, BSE or US stock above, or use the search at the top of the page.</div>
         )}
         {loaded && rows.length > 0 && visible.length === 0 && (
           <div className="empty">
