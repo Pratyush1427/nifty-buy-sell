@@ -62,7 +62,7 @@ Supabase → **Authentication**:
 ## 4. Vercel
 
 1. [vercel.com](https://vercel.com) → sign in with GitHub → **Add New → Project** → import
-   `Pratyush1427/nifty-buy-sell`. Name the project `stockpot` to get `stockpot.vercel.app` if it’s free.
+   `Pratyush1427/stockpot`. Name the project `stockpot` to get `stockpot.vercel.app` if it’s free.
 2. **Environment Variables** (Production):
 
    | Name | Value |
