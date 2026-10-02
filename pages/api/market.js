@@ -30,3 +30,5 @@ async function handler(req, res, userId) {
 }
 
 export default withUser(handler);
+
+export const config = { maxDuration: 60 };

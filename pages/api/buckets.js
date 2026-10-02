@@ -24,3 +24,5 @@ export default withUser(async (req, res, userId) => {
   }
   return methodNotAllowed(res, ['GET', 'POST', 'PATCH', 'DELETE']);
 });
+
+export const config = { maxDuration: 60 };

@@ -15,3 +15,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Fill failed' });
   }
 }
+
+export const config = { maxDuration: 60 };
