@@ -1,357 +1,143 @@
 <div align="center">
 
-# ▲ Nifty Signals
+# Stockpot
 
-**A self-hosted dashboard for Indian investors: stocks, mutual funds, gold and silver in one portfolio,<br>with BUY / HOLD / SELL signals from ten decision models, each with an honest track record.**
+**A learning game for Indian markets: build pretend buckets of stocks, mutual funds, gold and silver,
+and see how your ideas would have done at real closing prices.**
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-000?logo=nextdotjs)
-![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=000)
-![Python](https://img.shields.io/badge/Python-3.9+-3776ab?logo=python&logoColor=fff)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-f7931e?logo=scikitlearn&logoColor=fff)
-![SQLite](https://img.shields.io/badge/SQLite-local-003b57?logo=sqlite)
-![Data](https://img.shields.io/badge/data-NSE%20·%20BSE%20·%20AMFI-2563eb)
-
-[Walkthrough](#-walkthrough) · [Quick start](#-quick-start) · [How the signals work](#-how-the-signals-work) · [Architecture](#-architecture) · [API](#-api-reference)
-
-<img src="docs/images/portfolio.png" alt="Portfolio page: value, returns, allocation, holdings flagged for attention, and separate stock and mutual fund tables" width="900">
+![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres-3ecf8e?logo=supabase&logoColor=fff)
+![Python](https://img.shields.io/badge/Python-ML%20pipeline-3776ab?logo=python&logoColor=fff)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-models-f7931e?logo=scikitlearn&logoColor=fff)
+![Vercel](https://img.shields.io/badge/Vercel-hosting-000?logo=vercel)
 
 </div>
 
-> [!WARNING]
-> Nifty Signals is a research and tracking tool, **not investment advice**. Signals are rules-based and
-> statistical screens. The best of them shift the odds by a few percentage points, and past results
-> don't guarantee future ones.
+> [!IMPORTANT]
+> Stockpot is a **personal learning project and a game**. Buckets are pretend: no real money, orders or holdings.
+> Nothing here is investment advice, a recommendation or a research report, and the builder is **not registered
+> with SEBI**. Model outlooks are automated experiments; prices can be wrong or late. Don’t use it for real decisions.
 
----
+![My buckets: three buckets with picks, entry and latest closes, returns and model outlooks](docs/images/buckets.png)
 
 ## Contents
 
-- [Why this exists](#-why-this-exists)
-- [Walkthrough](#-walkthrough)
-- [Quick start](#-quick-start)
-- [How the signals work](#-how-the-signals-work)
-- [Mutual funds](#-mutual-funds)
-- [Architecture](#-architecture)
-- [Project structure](#-project-structure)
-- [API reference](#-api-reference)
-- [ML pipeline](#-ml-pipeline)
-- [Configuration and data](#-configuration-and-data)
-- [Limitations](#-limitations)
+- [How the game works](#how-the-game-works)
+- [Model outlooks](#model-outlooks)
+- [Accounts and privacy](#accounts-and-privacy)
+- [Architecture](#architecture)
+- [Run it locally](#run-it-locally)
+- [Deploy](#deploy)
+- [Project structure](#project-structure)
 
----
+## How the game works
 
-## 💡 Why this exists
+1. **Make a bucket for an idea.** “Banks I like”, “Gold as a hedge”, “IT turnaround”. Up to 5 buckets.
+2. **Add picks.** Any NSE/BSE stock or ETF (one-tap gold and silver), or any mutual fund by name. Up to 25 per bucket.
+3. **Each pick locks in at a closing price.** Added before 3:30 pm IST on a trading day: that day’s close.
+   Later, or on a weekend or holiday: the next trading day’s close. There are no live prices in the game.
+4. **Track it.** Each pick shows its return from entry close to the latest close. A bucket’s return is the plain
+   average of its picks: no quantities or money, so every pick counts equally.
+5. **Removing a pick** exits it at the next close, and its result **stays in the bucket’s record**, so losing picks
+   can’t be quietly hidden.
 
-Broker apps show you *what you own*. They don't tell you what a consistent set of rules thinks of it, or
-whether those rules have ever worked. Nifty Signals:
+Everything is end-of-day on purpose: SEBI and the exchanges have warned against virtual-trading games built on
+real-time prices. There is no leaderboard and nothing to win; buckets are private.
 
-- **Puts everything in one place.** Stocks (NSE/BSE), ETFs, gold and silver, and mutual funds, valued live, with returns in broker terms.
-- **Gives signals you can check.** Five classic technical rules, four machine-learning models and an overall vote. Every one is scored on the same out-of-sample test, so you can see which have actually worked.
-- **Stays honest.** It shows t-statistics, not just hit rates, and it says plainly when a model is no better than a coin flip.
-- **Keeps your data on your machine.** Holdings live in a local SQLite file. There's no account and no cloud.
+![Add to bucket dialog with stock search, gold and silver shortcuts, and the lock-in rule](docs/images/add-to-bucket.png)
 
----
+## Model outlooks
 
-## 🧭 Walkthrough
+Every stock gets a **Bullish / Neutral / Bearish outlook** from ten models built while learning: five classic
+technical rules (52-week breakout, 50/200-day averages, MACD, RSI, Bollinger bands), three machine-learning models
+(gradient boosting, logistic regression, random forest) and their ensemble, plus an overall vote.
 
-### 1. Portfolio: *"How am I doing?"*
+![Switching models on a stock page redraws the chart with that model's lines and outlook](docs/images/demo-models.gif)
 
-Current value, invested amount, total and 1-day returns, allocation by asset class, and a **Needs attention**
-list: holdings your chosen model says to SELL, positions above 25% of the portfolio, and IDCW fund plans whose
-returns look worse than they are. Stocks and mutual funds each get their own table, with the columns
-brokers use.
+- The ML models estimate the chance a stock beats the Nifty over the next 20 sessions, trained on Nifty 200 history
+  from 2010. Outlooks are percentile bands of that estimate, not price targets.
+- The **Models** page shows how each model behaved in a **walk-forward historical test** on years it never saw,
+  with t-statistics. Most results are within what chance would explain. Past tests say nothing about the future.
+- A nightly job on GitHub Actions re-scores every stock in the Nifty 200 or anyone’s bucket or watchlist, and
+  retrains weekly.
 
-*(Screenshot at the top of this page.)*
-
-### 2. Stocks: *"What's worth a look?"*
-
-Index cards (Nifty 50, Nifty 200, Sensex, gold, silver, USD/INR) sit above sortable lists with 60-day sparklines. The
-**Signals by** picker re-scores the whole list: columns, counts and sort order all follow the chosen model.
-
-<img src="docs/images/demo-stocks.gif" alt="Switching the Signals by picker re-scores the Nifty 50 list, then filtering to BUY signals" width="900">
-
-<details>
-<summary>Stocks page</summary>
-<br>
-<img src="docs/images/stocks.png" alt="Stocks page: index cards, list tabs, signal filters and the Nifty 50 list scored by the Overall vote" width="900">
-</details>
-
-### 3. Stock page: *"Should I act on this one?"*
-
-Your position, the overall verdict, a chart that draws **the selected model's own view** (moving averages,
-Bollinger bands, or an RSI or MACD panel), every model's call with its reasoning, and the key numbers.
-
-<img src="docs/images/demo-models.gif" alt="Changing the model on Reliance's page switches the chart between moving averages, Bollinger bands, RSI and MACD" width="900">
-
-<details>
-<summary>Full stock page</summary>
-<br>
-<img src="docs/images/stock-detail.png" alt="Reliance Industries: position, overall SELL verdict, chart, ten model verdicts and key numbers" width="900">
-</details>
-
-### 4. Mutual funds: *"How are my funds doing? Is this fund any good?"*
-
-Every AMFI-registered scheme is searchable by name. Fund pages show **growth of ₹10,000 against the Nifty 50
-(dividends reinvested)** on one shared axis, returns from 1 month to 5 years with the difference in points,
-the worst fall, volatility, and how often 1-year periods ended in gain. Regular and IDCW plans carry clear warnings.
-
-<table>
-<tr>
-<td width="50%"><img src="docs/images/funds.png" alt="Mutual funds page: your funds with returns, search, watchlist"></td>
-<td width="50%"><img src="docs/images/fund-detail.png" alt="Parag Parikh Flexi Cap Fund Direct Growth: 4.7 points a year ahead of the Nifty 50 over five years"></td>
-</tr>
-</table>
-
-### 5. Models: *"Can I trust the signals?"*
-
-Choose the model that drives signals across the app. The leaderboard compares all ten on the same test,
-and each ML model has its own report: results by year, and which features it relies on.
-
-<table>
-<tr>
-<td width="50%"><img src="docs/images/models.png" alt="Models page with the leaderboard of all ten decision models"></td>
-<td width="50%"><img src="docs/images/models-ml.png" alt="ML ensemble report: hit rate, spread, AUC, results by year, top features"></td>
-</tr>
-</table>
-
-### 6. Search and add anything
-
-One search box (press <kbd>/</kbd>) covers stocks and mutual funds. **+ Add investment** takes a stock, a fund (by name,
-with the latest NAV filled in) or a CSV from your broker. Names match what brokers show: NSE's official company names,
-and fund names with plan and option, e.g. *Parag Parikh Flexi Cap Fund Direct Growth*.
-
-<table>
-<tr>
-<td width="50%"><img src="docs/images/demo-search.gif" alt="Typing parag parikh in the header search and opening the fund"></td>
-<td width="50%"><img src="docs/images/add-investment.png" alt="Add investment dialog on the Mutual fund tab with the NAV filled in"></td>
-</tr>
-</table>
-
-### 7. On your phone
-
-Every page works at phone width. Wide tables scroll inside their cards, and the page itself never scrolls sideways.
-
-<img src="docs/images/mobile.png" alt="Portfolio, stock and fund pages at phone width" width="900">
-
-> Screenshots use a **sample portfolio**, not real holdings. Market data is from 30 Sep 2026.
-
----
-
-## 🚀 Quick start
-
-**Requirements:** Node.js 18+ and npm. Python 3.9+ is optional (for the ML models only).
-
-```bash
-git clone https://github.com/Pratyush1427/nifty-buy-sell.git
-cd nifty-buy-sell
-npm install
-npm run dev                 # → http://localhost:3000
-```
-
-That's the whole app: portfolio, stocks, mutual funds and the five technical-rule models. To add the
-**machine-learning models**:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r ml/requirements.txt
-npm run ml                  # downloads 16 years of prices, evaluates, trains, scores (~6 min)
-npm run ml:schedule         # optional (macOS): re-score every weekday at 18:30, retrain weekly
-```
-
-| Script | What it does |
+| Stock page | Models page |
 |---|---|
-| `npm run dev` | Start the app in development mode |
-| `npm run build` / `npm start` | Production build and server |
-| `npm run ml` | Full ML run: refresh index lists → download prices → walk-forward evaluation → train → score |
-| `npm run ml:predict` | Re-score all stocks with the saved models (~10 s) |
-| `npm run ml:schedule` / `ml:unschedule` | Install or remove the nightly job (macOS launchd) |
+| ![Stock page with the overall model outlook and price chart](docs/images/stock.png) | ![Models page with historical test results and a not-a-recommendation notice](docs/images/models.png) |
 
-Everything you enter is stored in `data/portfolio.db` on your machine (git-ignored).
+## Accounts and privacy
 
----
+- **Sign in** with email and password (confirmed by email), an email magic link, or Google, via Supabase Auth.
+- **Onboarding consent:** before using the app, every user picks a name and avatar and ticks five acknowledgements
+  (a learning game, not advice and not SEBI-registered, unreliable data, 18+, own responsibility). Consent is stored
+  with a timestamp and checked server-side on every request; users can’t grant it to themselves.
+- **Private by design:** every query is scoped to the signed-in user; row level security is on for every table so
+  Supabase’s public API can’t read anything. Users can delete their account and all its data from the Account page.
 
-## 📈 How the signals work
+<img src="docs/images/welcome.png" alt="Welcome screen with name, avatar and five acknowledgements" width="720">
 
-Each stock is scored by **ten decision models**. Pick one on the Models page (or with any *Signals by*
-picker); it drives every signal in the app.
-
-| Model | Group | BUY when… | SELL when… |
-|---|---|---|---|
-| **Overall** *(default)* | Vote | BUY votes outnumber SELL votes by 2+ across the five rules and the ML ensemble | the reverse |
-| **52W breakout** | Trend rule | within 2% of the 52-week closing high and above the 20-day EMA | below the 20-day EMA |
-| **50/200 DMA** | Trend rule | price above the 50-day average, which is above the 200-day | price below the 50-day, which is below the 200-day |
-| **MACD** (12, 26, 9) | Momentum rule | MACD above its signal line and above zero | below both |
-| **RSI** (14) | Contrarian rule | RSI below 30 (oversold) | RSI above 70 (overbought) |
-| **Bollinger** (20, 2σ) | Contrarian rule | close below the lower band | close above the upper band |
-| **ML ensemble** | Machine learning | top 20% of the Nifty 200 by predicted chance of beating the Nifty over 20 sessions | bottom 20% |
-| **Gradient boosting** | Machine learning | same, one model | same |
-| **Logistic regression** | Machine learning | same, one model | same |
-| **Random forest** | Machine learning | same, one model | same |
-
-Anything else is **HOLD**. Indicators are computed from daily closes with today's live price folded in, and
-they're checked against pandas (identical to 3 decimal places).
-
-### Track record (out of sample, 2016 – 2026)
-
-Every model was scored on the same test. Each year was predicted using only earlier data, outcomes were measured over
-non-overlapping 20-session periods, and all stocks were compared with the Nifty 50. Across all stocks, **51.0%**
-beat the Nifty in a given period.
-
-| Model | BUY calls that beat the Nifty | SELL calls that beat the Nifty | BUY minus SELL, per 20 sessions | t-stat |
-|---|---:|---:|---:|---:|
-| ML ensemble | **54.6%** | 48.7% | **+1.42%** | **3.64** |
-| Gradient boosting | 54.5% | 48.4% | +1.40% | 3.99 |
-| Random forest | 53.5% | 47.7% | +1.36% | 3.77 |
-| Logistic regression | 53.1% | 48.3% | +1.24% | 2.99 |
-| Overall vote | 53.1% | 50.0% | +0.83% | 2.09 |
-| RSI | 55.1% | 50.7% | +0.76% | 0.49 |
-| 50/200 DMA | 52.1% | 51.7% | +0.64% | 1.48 |
-| Bollinger | 52.5% | 49.1% | +0.62% | 0.79 |
-| 52W breakout | 51.4% | 51.0% | +0.03% | 0.07 |
-| MACD | 51.1% | 50.3% | −0.04% | −0.12 |
-
-**How to read this:** a t-stat of about 2 or more is the usual bar for "probably not luck". All four ML models clear it.
-None of the classic rules do, and the 52W breakout and MACD rules are indistinguishable from chance.
-These figures are before trading costs, and they're flattered by training on today's index members (see [Limitations](#-limitations)).
-
----
-
-## 🏦 Mutual funds
-
-- **Data:** AMFI's daily NAVs via [mfapi.in](https://www.mfapi.in), with full history from launch. Cached for 6 hours.
-- **No BUY/SELL signals, by design.** Trading signals target short-term swings; funds are held for years. Instead,
-  each fund page answers: has it **beaten the Nifty 50 after fees** over 3 and 5 years, how deep was its **worst fall**,
-  and are you in the **cheaper Direct plan**?
-- **Fair benchmark:** equity funds are compared with `NIFTYBEES` with dividends reinvested, which stands in for the Nifty 50 Total Return Index.
-  As a check, the UTI Nifty 50 Index Fund trails it by only about its own fees.
-- **Naming:** funds are shown the way brokers list them (fund name, then Direct or Regular, then Growth or IDCW), with the AMFI code and ISIN for exact matching.
-- Stored as holdings with symbol `MF:<AMFI scheme code>`, so CSV import works for funds too.
-
----
-
-## 🧱 Architecture
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Browser
-    UI["Next.js pages<br/>Portfolio · Stocks · Funds · Models"]
-  end
-  subgraph Server["Next.js API routes (Node)"]
-    M["lib/market.js<br/>quotes · history · indicators · signals"]
-    F["lib/funds.js<br/>NAVs · returns · risk"]
-    H["lib/holdings.js<br/>CRUD · CSV · validation"]
-    DB[("SQLite<br/>data/portfolio.db")]
-  end
-  subgraph Python["ML pipeline (Python, nightly)"]
-    P["ml/run.py<br/>features → walk-forward → train → score"]
-  end
-  Y[(Yahoo Finance)]
-  A[(AMFI via mfapi.in)]
-  N[(NSE lists)]
-
-  UI <--> M & F & H
-  M --> Y
-  F --> A
-  F --> Y
-  M & F & H <--> DB
-  P --> Y
-  P --> N
-  P -- "ml_scores, report" --> DB
-  M -. "on-demand scoring" .-> P
+  U[Browser] -->|pages, API calls| V[Next.js on Vercel<br/>middleware · pages · API routes]
+  V -->|session cookies| A[Supabase Auth]
+  V -->|SQL, scoped per user| D[(Supabase Postgres<br/>buckets · picks · watchlist<br/>market cache · ML scores)]
+  V -->|quotes, daily closes| Y[Yahoo Finance]
+  V -->|mutual fund NAVs| M[AMFI via mfapi.in]
+  C[Vercel Cron<br/>weekdays after close] -->|lock in closing prices| V
+  G[GitHub Actions<br/>weekdays 19:00 IST] -->|scores, model report| D
 ```
 
-**Resilience:**
-- **Batched, cached requests:** all quotes arrive in one Yahoo request (cached 60 s), and price history is cached for 30 minutes.
-- **Survives outages:** the last good data is saved in SQLite, so an outage or restart shows real prices marked *stale* rather than invented numbers.
-- **Backs off after failures:** it pauses for 15 s, doubling up to 5 min, instead of retrying Yahoo constantly.
-- **Checks what you enter:** symbols are validated before saving, and CSV imports are all-or-nothing.
+- **Web app:** Next.js 14 (Pages Router). Middleware refreshes the Supabase session and gates pages; API routes
+  check the user and consent themselves.
+- **Database:** Postgres with the schema in [`supabase/migrations`](supabase/migrations). Market data and ML
+  scores are shared; buckets, picks and watchlists belong to a user.
+- **Prices:** fetched on demand and cached in memory and in Postgres. Picks are filled from final daily closes
+  when buckets are read, and by an evening cron for users who don’t visit.
+- **ML pipeline:** Python and scikit-learn in [`ml/`](ml), run by
+  [`.github/workflows/nightly-ml.yml`](.github/workflows/nightly-ml.yml). Trained models persist in the
+  Actions cache; a cache miss simply retrains (about 6 minutes).
 
----
+## Run it locally
 
-## 📁 Project structure
+You need Node 20+, Docker Desktop and Python 3.9+.
 
-```
-├── pages/                  Next.js pages and API routes
-│   ├── index.js            Portfolio
-│   ├── stocks/             Stock lists and stock detail
-│   ├── funds/              Mutual funds and fund detail
-│   ├── models.js           Model picker, leaderboard, ML reports
-│   └── api/                market · chart · instrument · search · portfolio · watchlist · funds/* · models · ml-score
-├── components/             AppShell, GlobalSearch, AddInvestment, HoldingsTable, PriceChart, FundChart, Leaderboard, …
-├── lib/
-│   ├── market.js           Yahoo quotes/history, caching, circuit breaker
-│   ├── indicators.js       SMA, EMA, RSI, MACD, Bollinger
-│   ├── strategies.js       The ten decision models (shared by server and browser)
-│   ├── funds.js            Mutual fund data, returns, risk
-│   ├── names.js            Broker-style names and ISINs from NSE's official list
-│   ├── holdings.js         Portfolio storage, CSV parsing
-│   └── universes.js        Stock list tabs (add a tab here)
-├── ml/                     Python: features, models, walk-forward evaluation, scoring
-├── backtest/               Standalone backtest of the 52W breakout rule
-├── scripts/schedule-ml.sh  Nightly job installer (macOS launchd)
-├── data/                   Index constituent CSVs (tracked); your database and caches (ignored)
-└── docs/images/            Screenshots and GIFs for this README
+```bash
+npm install
+npm run db:start               # local Supabase (Postgres + Auth + test inbox) in Docker
+cp .env.example .env.local     # local values already filled in
+
+python3 -m venv .venv && .venv/bin/pip install -r ml/requirements.txt
+npm run ml                     # first run trains the models and writes scores (~6 minutes)
+
+npm run dev                    # http://localhost:3100
 ```
 
----
+Sign-up emails land in the local test inbox at http://127.0.0.1:54324. `npm run ml:predict` re-scores with the
+saved models; `npm run db:reset` wipes the local database.
 
-## 🔌 API reference
+## Deploy
 
-| Route | Purpose |
-|---|---|
-| `GET /api/market?universe=nifty50&symbols=A.NS,B.NS` | Benchmarks, FX, and every model's signals for a list plus extra symbols |
-| `GET /api/instrument?symbol=RELIANCE` | Price and all ten verdicts for any one stock |
-| `GET /api/chart?symbol=RELIANCE` | Daily closes with EMA/SMA, Bollinger, RSI and MACD series |
-| `GET /api/search?q=tata` | Stock search (NSE first) |
-| `GET /api/funds/search?q=parag` | Mutual fund search (best match, then Direct Growth first) |
-| `GET /api/funds/:code` | Fund detail: NAV history, returns vs benchmark, risk |
-| `GET /api/funds/quotes?symbols=MF:122639` | Latest NAVs |
-| `GET` · `POST` · `PUT` · `DELETE /api/portfolio` | Holdings: list (`?format=csv` to export), add or import, edit, remove |
-| `GET` · `POST` · `DELETE /api/watchlist` | Watchlist (stocks and funds) |
-| `GET /api/models` | ML evaluation report and leaderboard |
-| `POST /api/ml-score` | Score a stock outside the Nifty 200 with the ML models (~3 s) |
+Vercel (web app and evening cron) + Supabase (database and auth) + GitHub Actions (nightly ML), all on free
+tiers. Step-by-step: [docs/DEPLOY.md](docs/DEPLOY.md).
 
-Symbols are normalised: `infy` → `INFY.NS`. Use `.BO` for BSE-only listings and `MF:<code>` for funds.
-CSV import accepts `symbol`, `shares`/`qty`/`units` and `avg_price`/`average price` columns in any order.
+## Project structure
 
----
-
-## 🤖 ML pipeline
-
-- **Target:** will a stock beat the Nifty 50 over the next 20 sessions? Predicting *relative* return removes market-wide moves, which no stock-level feature can forecast.
-- **Features (30):** returns over 1 week to 1 year, volatility, RSI, MACD, distance from the 20/50/200-day averages, distance from the 52-week high and low, Bollinger %B and width, volume trend, strength relative to the Nifty, beta, market conditions, and rankings within the universe.
-- **Universe:** the Nifty 200, with lists refreshed from NSE on each full run. About 650,000 stock-days since 2010.
-- **Models:** scikit-learn `HistGradientBoostingClassifier`, `LogisticRegression` and `RandomForestClassifier`, plus their average (the ensemble).
-- **Evaluation:** walk-forward by year from 2016. Each year is predicted by models trained only on data ending 40 days before it starts.
-- **Explanations:** each score lists the features pushing it up or down, found by resetting each feature to that day's median across the universe.
-- **Beyond the Nifty 200:** stocks you hold or watch are scored nightly, and any stock can be scored on demand. These scores are flagged as less reliable.
-
----
-
-## 🔧 Configuration and data
-
-| Setting | Purpose |
-|---|---|
-| `lib/universes.js` | Stock list tabs. Add Bank Nifty, crude, etc. as a new entry (benchmark plus a CSV or symbol list) |
-| `PORTFOLIO_DB=/path/to.db` | Use a different database, e.g. a demo or test copy |
-| `NEXT_DIST_DIR=.next-test` | Build into another folder without disturbing a running dev server |
-| `data/nifty50.csv`, `nifty200.csv` | Refreshed from NSE by `npm run ml`. `sensex.csv` is maintained by hand. |
-
-**Data sources:** [Yahoo Finance](https://finance.yahoo.com) for stock prices (may be delayed),
-[mfapi.in](https://www.mfapi.in) / AMFI for fund NAVs, and [NSE](https://www.nseindia.com) for index constituents and official company names.
-
----
-
-## 🚧 Limitations
-
-- **Survivorship bias:** the ML models train on *today's* index members, so stocks that fell out of the index are missing. Historical results are flattered.
-- **No trading costs:** returns in the track record are before brokerage, taxes and slippage.
-- **Delayed and unofficial data:** Yahoo quotes may lag, and the free sources can change or rate-limit without notice.
-- **Small edges:** the best models improve the chance of beating the Nifty from about 51% to 55%. That's a statistical tilt, not a forecast.
-- **Only one rule is backtested with trades:** `backtest/` simulates the 52W breakout rule with stops. The other rules are scored only in the ML pipeline's evaluation.
-
----
-
-<div align="center">
-<sub>Not investment advice. Built for learning and personal tracking.</sub>
-</div>
+```
+pages/            UI pages and API routes (pages/api)
+  api/buckets.js, api/picks.js    the game
+  api/cron/fill-picks.js          evening closing-price fill
+  login, signup, welcome, account, terms, disclaimer
+components/       UI components (buckets dialog, charts, layout)
+lib/
+  buckets.js      game rules: closing-day pricing, returns, limits
+  closingDay.js   which session's close prices an action
+  market.js       quotes, histories, outlooks; cached in Postgres
+  strategies.js   the ten models' rules and wording
+  supabase/       auth clients (server, browser, admin)
+middleware.js     session refresh, sign-in and consent gates
+ml/               Python pipeline: features, walk-forward training, scoring
+supabase/         local config, migrations, email templates
+backtest/         standalone backtest of the breakout rule
+```

@@ -62,6 +62,10 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           MODE: ${{ inputs.mode || 'nightly' }}
         run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::DATABASE_URL secret is not set yet (see docs/DEPLOY.md); skipping."
+            exit 0
+          fi
           case "$MODE" in
             retrain) python -W ignore -m ml.run ;;
             predict) python -W ignore -m ml.run --predict ;;
@@ -69,7 +73,7 @@ jobs:
           esac
 
       - name: Save trained models
-        if: success()
+        if: success() && hashFiles('data/ml/models.joblib') != ''
         uses: actions/cache/save@v4
         with:
           path: |
